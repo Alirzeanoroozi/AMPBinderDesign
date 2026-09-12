@@ -12,13 +12,6 @@
 
 set -euo pipefail
 
-# BoltzGen design path.
-# python src/1_design/design.py --yaml_path boltzgen_inputs/yamls/KPC3.yaml --output_dir boltzgen_outputs/KPC3/
-# python src/1_design/design.py --yaml_path boltzgen_inputs/yamls/NDM5.yaml --output_dir boltzgen_outputs/NDM5/
-
-# python src/1_design/inverse_folding.py --design_dir boltzgen_outputs/KPC3 --output_dir boltzgen_outputs/KPC3_inverse_folding/
-# python src/1_design/inverse_folding.py --design_dir boltzgen_outputs/NDM5 --output_dir boltzgen_outputs/NDM5_inverse_folding/
-
 REPO_DIR="$(pwd)"
 CONDA_ENV_NAME="${CONDA_ENV_NAME:-boltzgen}"
 NUM_DESIGNS="${NUM_DESIGNS:-5000}"
@@ -68,7 +61,6 @@ EXTRACT_OUTPUT_DIRS=(boltzgen_outputs)
 if [[ "${RUN_RFDIFFUSION:-0}" == "1" ]]; then
   : "${RFDIFFUSION_REPO:?Set RFDIFFUSION_REPO=/path/to/RFdiffusion}"
   RFDIFFUSION_ENV="${RFDIFFUSION_ENV:-SE3nv}"
-  source ${CONDA_BASE}/bin/activate "${RFDIFFUSION_ENV}"
   conda activate "${RFDIFFUSION_ENV}"
   python src/1_design/rfdiffusion.py \
     --rfdiffusion-dir "${RFDIFFUSION_REPO}" \
@@ -79,7 +71,6 @@ if [[ "${RUN_RFDIFFUSION:-0}" == "1" ]]; then
     --hotspot-limit "${RFDIFFUSION_HOTSPOT_LIMIT:-0}" \
     --noise "${RFDIFFUSION_NOISE:-0.5}"
 
-  source ${CONDA_BASE}/bin/activate bg_macrel
   conda activate "${CONDA_ENV_NAME}"
   python src/1_design/inverse_folding.py --design_dir rfdiffusion_outputs/KPC3 --output_dir rfdiffusion_outputs/KPC3_inverse_folding --skip_existing
   python src/1_design/inverse_folding.py --design_dir rfdiffusion_outputs/NDM5 --output_dir rfdiffusion_outputs/NDM5_inverse_folding --skip_existing
