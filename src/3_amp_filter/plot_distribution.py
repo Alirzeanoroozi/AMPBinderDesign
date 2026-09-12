@@ -134,7 +134,7 @@ def plot_all(df: pd.DataFrame, out_path: Path) -> None:
         sharex=False,
         sharey=False,
     )
-    fig.suptitle("AMP filter metric distributions", fontsize=14, y=0.995)
+    fig.suptitle("Delivery/developability filter metric distributions", fontsize=14, y=0.995)
 
     for i, (kind, col) in enumerate(panels):
         ax = axes[i // ncols][i % ncols]
@@ -159,7 +159,7 @@ def main() -> int:
     ap.add_argument(
         "--out",
         type=Path,
-        default=REPO / "results" / "plots" / "amp_filter_distributions.png",
+        default=REPO / "results" / "plots" / "delivery_filter_distributions.png",
     )
     ap.add_argument("--targets", nargs="+", default=list(TARGETS))
     args = ap.parse_args()

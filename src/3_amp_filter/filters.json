@@ -1,31 +1,51 @@
 {
-  "_comment": "Hard gates for the structure-prediction panel. No ranking. A design passes if every gate that has a value on that row succeeds; a missing value skips that gate (e.g. HydrAMP not scored, or catalytic_ok not yet computed). AMP classifier gates plus the sequence/developability floors from select_permeable.py.",
+  "_comment": "Hard gates for the structure-prediction panel. No ranking. A design passes if every gate that has a value on that row succeeds; a missing value skips that gate (e.g. catalytic_ok is not available until structure scoring). These gates intentionally do not require traditional AMP-likeness. They use peptide developability plus outer-membrane/periplasmic-delivery proxy properties for Gram-negative bacteria.",
 
   "gates": {
-    "ampscanner_amp": {
-      "column": "ampscanner_class",
-      "equals": "AMP",
-      "reason": "AMPScanner class is not AMP"
+    "toxinpred_non_toxin": {
+      "column": "toxinpred_class",
+      "equals": "Non-Toxin",
+      "reason": "ToxinPred classified as toxin"
     },
-    "macrel_amp": {
-      "column": ["macrel_is_amp", "macrel_is_amp_bool"],
-      "equals": "True",
-      "reason": "Macrel did not classify as AMP"
+    "macrel_non_hemolytic": {
+      "column": "macrel_hemolytic",
+      "equals": "NonHemo",
+      "reason": "Macrel classified as hemolytic"
     },
-    "hydramp_amp": {
-      "column": "hydramp_amp_prob",
-      "min": 0.5,
-      "reason": "HydrAMP AMP probability < 0.5"
+    "macrel_hemo_probability": {
+      "column": "macrel_hemo_prob",
+      "max": 0.5,
+      "reason": "Macrel hemolysis probability > 0.5"
     },
     "catalytic_ok": {
       "column": "catalytic_ok",
       "equals": "True",
       "reason": "does not contact the catalytic core"
     },
-    "net_charge": {
+    "net_charge_min": {
       "column": "net_charge_pH7.4",
-      "min": -10.0,
-      "reason": "net charge at pH 7.4 below floor (-10, essentially off)"
+      "min": 1.0,
+      "reason": "net charge at pH 7.4 below periplasmic-delivery floor (+1)"
+    },
+    "net_charge_max": {
+      "column": "net_charge_pH7.4",
+      "max": 8.0,
+      "reason": "net charge at pH 7.4 above moderate-delivery ceiling (+8)"
+    },
+    "hydrophobic_moment": {
+      "column": "hydrophobic_moment",
+      "min": 0.25,
+      "reason": "hydrophobic moment below amphipathicity floor (0.25)"
+    },
+    "delivery_proxy": {
+      "column": "delivery_proxy",
+      "min": 0.35,
+      "reason": "periplasmic-delivery proxy below 0.35"
+    },
+    "gravy": {
+      "column": "gravy",
+      "max": 1.2,
+      "reason": "mean hydrophobicity too high for soluble/non-lytic delivery"
     },
     "length": {
       "column": "length",

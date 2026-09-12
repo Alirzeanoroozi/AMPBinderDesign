@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Write Boltz-2 YAMLs for AMP-filtered binders (does not run prediction).
+"""Write Boltz-2 YAMLs for delivery/developability-filtered binders.
 
 Each filtered FASTA record becomes one config:
   chain A = target design-domain sequence

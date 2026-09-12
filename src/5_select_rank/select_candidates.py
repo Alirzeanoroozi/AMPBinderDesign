@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Select a diverse wet-lab panel from structure-scored AMP binders.
+"""Select a diverse wet-lab panel from structure-scored peptide binders.
 
-Reads results/structure_manifest_<TARGET>.csv (AMP-filtered designs with Boltz-2,
-ipSAE, and active-site overlap). Ranks by interface confidence + epitope
-coverage, then keeps the top N sequences with pairwise identity < max-identity.
+Reads results/structure_manifest_<TARGET>.csv (delivery/developability-filtered
+designs with Boltz-2, ipSAE, and active-site overlap). Ranks by interface
+confidence + epitope coverage, then keeps the top N sequences with pairwise
+identity < max-identity.
 
 Default hard gates: catalytic_ok, boltz2_iptm >= 0.5, ToxinPred Non-Toxin.
 If that set is too small, iPTM then the toxin gate are relaxed; catalytic_ok

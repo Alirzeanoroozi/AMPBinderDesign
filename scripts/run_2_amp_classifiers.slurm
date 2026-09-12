@@ -16,20 +16,25 @@
 #   FASTAS_DIR (default: fastas)          directory of input .fasta files
 #   OUTPUT_DIR (default: results/classifiers)
 #   ORCHESTRATOR_ENV (default: gmconda_py3923)  conda env for run_classifiers.py
+#   CLASSIFIERS (default: ampscanner macrel hydramp_amp hydramp_mic toxinpred)
 #
 # PREREQUISITE done on a LOGIN NODE (compute nodes usually have no internet):
 #   cd src/2_amp_classifiers && ./download_models.sh && ./setup_envs.sh
 
 FASTAS_DIR="${FASTAS_DIR:-fastas}"
 OUTPUT_DIR="${OUTPUT_DIR:-results/classifiers}"
+CLASSIFIERS="${CLASSIFIERS:-ampscanner macrel hydramp_amp hydramp_mic toxinpred}"
+
+set -euo pipefail
 
 REPO_DIR="$(pwd)"
-mkdir -p "${REPO_DIR}/${OUTPUT_DIR}"
+mkdir -p "${REPO_DIR}/${OUTPUT_DIR}" "${REPO_DIR}/logs"
 
 # Initialise environment and modules
 CONDA_BASE=$(conda info --base)
-source ${CONDA_BASE}/bin/activate gmconda_py3923
-export LD_LIBRARY_PATH=${CONDA_BASE}/lib
+source "${CONDA_BASE}/etc/profile.d/conda.sh"
+conda activate gmconda_py3923
+export LD_LIBRARY_PATH="${CONDA_BASE}/lib:${LD_LIBRARY_PATH:-}"
 
 FASTA_FILES=( "${REPO_DIR}/${FASTAS_DIR}"/*.fasta )
 
@@ -38,7 +43,8 @@ for fasta in "${FASTA_FILES[@]}"; do
     echo "=== $(basename "${fasta}") ($(date)) ==="
     ./run_classifiers.sh \
         --fasta "${fasta}" \
-        --output-dir "${REPO_DIR}/${OUTPUT_DIR}"
+        --output-dir "${REPO_DIR}/${OUTPUT_DIR}" \
+        --classifiers ${CLASSIFIERS}
 done
 
 echo "Merging classifier outputs ..."

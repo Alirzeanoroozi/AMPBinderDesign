@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 """
-Stage 4 - Developability, synthesizability, and delivery-proxy descriptors.
+Stage 3 - Peptide developability, synthesizability, and delivery-proxy descriptors.
 
-Reframing vs the old AMP pipeline:
+Reframing vs the old AMP-style pipeline:
   - "Is it an AMP?" / "similarity to an AMP database" are DROPPED as objectives. The
     designs are folded enzyme-inhibitor binders, not membrane lytics; AMP-likeness is
     not the goal and the old similarity-to-DBAASP ranking actively penalised novelty.
-  - The cationic/amphipathic ("AMP-like") signals are KEPT but RELABELLED as a
-    *periplasmic-delivery proxy*: NDM-5 and KPC-3 are periplasmic, so a binder must
-    cross the outer membrane to reach them. Charge + amphipathicity correlate with OM
-    permeation, so they inform delivery, not efficacy.
-  - Real developability gates are ADDED: synthesis liabilities, aggregation proxy.
+  - Cationicity and amphipathicity are retained as a
+    *Gram-negative outer-membrane/periplasmic-delivery proxy*: NDM-5 and KPC-3
+    are periplasmic, so a binder must cross the outer membrane to reach them.
+    These signals inform delivery, not direct antimicrobial efficacy.
+  - Generic peptide developability gates are retained: synthesis liabilities,
+    aggregation proxy, length, hydrophobicity, hemolysis, and toxicity.
 
 Self-contained (no scipy / modlamp). Usage:
   python developability.py --fasta designs.fasta --out developability_<T>.csv
@@ -94,7 +95,8 @@ def descriptors(seq):
     q = net_charge(seq)
     mu = hydrophobic_moment(seq)
     flags = liabilities(seq)
-    # delivery proxy: periplasmic access favoured by net + charge AND amphipathicity
+    # Delivery proxy: periplasmic access is favoured by net positive charge and
+    # amphipathicity. It is intentionally not an AMP-activity score.
     delivery = round(min(max(q, 0) / 6.0, 1.0) * 0.5 + min(mu / 0.6, 1.0) * 0.5, 3)
     return {
         "length": len(seq),

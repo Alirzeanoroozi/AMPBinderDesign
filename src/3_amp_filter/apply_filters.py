@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Keep designs that pass filters.json hard gates (no ranking).
 
-Gates mix AMP classifier scores with the developability / inhibitor floors from
-select_permeable.py (catalytic_ok, net charge, length, liabilities, aggregation).
+Gates select for generic peptide developability plus Gram-negative
+outer-membrane/periplasmic-delivery proxy properties. Traditional AMP-likeness
+classifiers are kept in manifests as annotations, not hard filters.
 A missing value (e.g. HydrAMP not scored, or catalytic_ok not yet computed)
 skips that gate for that row.
 

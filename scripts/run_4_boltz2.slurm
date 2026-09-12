@@ -10,12 +10,22 @@
 #SBATCH --output=logs/4_boltz2.out
 #SBATCH --error=logs/4_boltz2.out
 
+set -euo pipefail
+
+CONDA_ENV_NAME="${CONDA_ENV_NAME:-boltz}"
+NUMBA_CACHE_DIR="${NUMBA_CACHE_DIR:-/scratch/tmp/numba-cache-${USER:-ampbinder}}"
+BOLTZ_CACHE="${BOLTZ_CACHE:-/scratch/esevinc22/.boltz}"
+MPLCONFIGDIR="${MPLCONFIGDIR:-/scratch/tmp/mpl-${USER:-ampbinder}}"
+export NUMBA_CACHE_DIR BOLTZ_CACHE MPLCONFIGDIR PYTHONUNBUFFERED=1
+mkdir -p logs results "${NUMBA_CACHE_DIR}" "${BOLTZ_CACHE}" "${MPLCONFIGDIR}"
+
 CONDA_BASE="$(conda info --base)"
-source "${CONDA_BASE}/bin/activate" latest_bg
+source "${CONDA_BASE}/etc/profile.d/conda.sh"
+conda activate "${CONDA_ENV_NAME}"
 export LD_LIBRARY_PATH="${CONDA_BASE}/lib:${LD_LIBRARY_PATH:-}"
 
-# python src/4_structure_prediction/prepare_configs.py
-# boltz predict boltz_inputs --out_dir boltz_results --write_full_pae
+python src/4_structure_prediction/prepare_configs.py
+boltz predict boltz_inputs --out_dir boltz_results --write_full_pae
 
 PRED=boltz_results/boltz_results_boltz_inputs/predictions
 

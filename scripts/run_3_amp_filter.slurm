@@ -10,15 +10,23 @@
 #SBATCH --output=logs/3_amp_filter.out
 #SBATCH --error=logs/3_amp_filter.out
 
+set -euo pipefail
+
+CONDA_ENV_NAME="${CONDA_ENV_NAME:-ted}"
+MPLCONFIGDIR="${MPLCONFIGDIR:-/scratch/tmp/mpl-${USER:-ampbinder}}"
+export MPLCONFIGDIR PYTHONUNBUFFERED=1
+mkdir -p logs results/plots "${MPLCONFIGDIR}"
+
 # Initialise environment and modules
-CONDA_BASE=$(conda info --base)
-source ${CONDA_BASE}/bin/activate bg_macrel
-export LD_LIBRARY_PATH=${CONDA_BASE}/lib
+CONDA_BASE="$(conda info --base)"
+source "${CONDA_BASE}/etc/profile.d/conda.sh"
+conda activate "${CONDA_ENV_NAME}"
+export LD_LIBRARY_PATH="${CONDA_BASE}/lib:${LD_LIBRARY_PATH:-}"
 
 python src/3_amp_filter/developability.py --fasta fastas/NDM5.fasta --out results/developability_NDM5.csv
 python src/3_amp_filter/developability.py --fasta fastas/KPC3.fasta --out results/developability_KPC3.csv
 
-python src/3_amp_filter/plot_distributions.py
+python src/3_amp_filter/plot_distribution.py
 
 python src/3_amp_filter/create_manifest.py
 

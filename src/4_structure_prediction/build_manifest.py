@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Build the structure-prediction manifest from AMP-filtered FASTAs.
+"""Build the structure-prediction manifest from delivery/developability-filtered FASTAs.
 
 One row per design_id from results/filtered_<TARGET>.fasta. Left-joins any
-score CSVs that have a design_id column (filtered AMP table, Boltz-2, ipSAE,
+score CSVs that have a design_id column (filtered sequence table, Boltz-2, ipSAE,
 active-site overlap, ...).
 
 Usage (from AMPBinderDesign):

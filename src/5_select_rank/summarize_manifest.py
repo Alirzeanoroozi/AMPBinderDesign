@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Quality summary of a structure-scored AMP-binder table.
+"""Quality summary of a structure-scored peptide-binder table.
 
 Default input is results/ranked_<T>.csv (or structure_manifest_<T>.csv).
 Reports catalytic-core yield, Boltz-2 / ipSAE / epitope distributions, and
@@ -30,8 +30,8 @@ KEY_METRICS = [
     ("pDockQ", "pDockQ"),
     ("LIS", "LIS"),
     ("boltz2_plddt", "Boltz-2 complex pLDDT"),
-    ("ampscanner_prob", "AMPScanner P(AMP)"),
-    ("macrel_amp_prob", "Macrel P(AMP)"),
+    ("ampscanner_prob", "AMPScanner P(AMP annotation)"),
+    ("macrel_amp_prob", "Macrel P(AMP annotation)"),
     ("macrel_hemo_prob", "Macrel P(hemolytic)"),
     ("length", "Binder length (aa)"),
     ("net_charge_pH7.4", "Net charge at pH 7.4"),
@@ -181,11 +181,12 @@ def summarize(rows: list[dict], label: str, top_n: int) -> str:
         p("")
 
     p("WET-LAB READINESS:")
-    p("  Pool is already AMP-positive (AMPScanner + Macrel). Rank by Boltz-2 iPTM,")
+    p("  Pool is filtered for periplasmic-delivery proxy and generic peptide")
+    p("  developability, not traditional AMP-likeness. Rank by Boltz-2 iPTM,")
     p("  ipSAE_min, and epitope coverage; require catalytic_ok for the shipped panel.")
     p("  - catalytic_ok + iPTM>=0.5 yield large enough for n=25: ship that panel.")
     p("  - ipSAE_min is typically low here; treat it as a tie-breaker, not a hard cut.")
-    p("  - Hemolysis is common among AMPs; prefer NonHemo but do not empty the panel.")
+    p("  - Hemolysis and toxicity are exclusion risks for delivery-focused binders.")
     return "\n".join(out)
 
 

@@ -161,7 +161,7 @@ def plot_iptm_violin(df: pd.DataFrame, sel: pd.DataFrame, ax=None):
     ax.axhline(0.5, color="#666666", ls="--", lw=1, label="iPTM = 0.5")
     ax.set_ylabel("Boltz-2 iPTM")
     ax.set_xlabel("")
-    ax.set_title("Interface confidence (AMP-filtered pool)")
+    ax.set_title("Interface confidence (delivery-filtered pool)")
     ax.set_ylim(0, 1.02)
     handles, labels = ax.get_legend_handles_labels()
     if handles:
@@ -236,7 +236,7 @@ def plot_gate_funnel(df: pd.DataFrame, sel: pd.DataFrame, ax=None):
     own = ax is None
     if own:
         fig, ax = plt.subplots(figsize=(7.2, 4.6))
-    stages = ["AMP-filtered", "catalytic_ok", "iPTM ≥ 0.5", "Non-Toxin", "selected"]
+    stages = ["delivery-filtered", "catalytic_ok", "iPTM >= 0.5", "Non-Toxin", "selected"]
     x = np.arange(len(stages))
     width = 0.36
     targets = [t for t in TARGETS if t in set(df["target"])]
@@ -303,7 +303,7 @@ def plot_correlation(df: pd.DataFrame, out_dir: Path) -> None:
     corr = df[cols].corr(numeric_only=True)
     fig, ax = plt.subplots(figsize=(8.5, 7.2))
     sns.heatmap(corr, annot=True, fmt=".2f", cmap="coolwarm", center=0, ax=ax, square=True, annot_kws={"size": 7})
-    ax.set_title("Metric correlations (AMP-filtered pool)")
+    ax.set_title("Metric correlations (delivery-filtered pool)")
     _savefig(fig, out_dir, "05_correlation.png")
 
 

@@ -1,8 +1,9 @@
-"""Shared ranking helpers for the AMP + structure panel.
+"""Shared ranking helpers for the delivery + structure panel.
 
-The AMP-filtered pool already passed AMPScanner and Macrel. Ranking therefore
-uses Boltz-2 interface confidence, ipSAE, and active-site overlap, with toxin /
-hemolysis / developability as soft penalties.
+The filtered pool is selected for peptide developability and Gram-negative
+outer-membrane/periplasmic-delivery proxy properties. Ranking therefore uses
+Boltz-2 interface confidence, ipSAE, and active-site overlap, with delivery,
+toxin, hemolysis, aggregation, and developability as secondary terms.
 """
 from __future__ import annotations
 
@@ -21,14 +22,14 @@ RANK_HIGHER = (
     ("n_catalytic_contacts", 1.0),
     ("interface_precision", 0.8),
     ("pDockQ", 0.6),
-    ("ampscanner_prob", 0.4),
-    ("macrel_amp_prob", 0.3),
-    ("delivery_proxy", 0.3),
+    ("delivery_proxy", 0.6),
+    ("hydrophobic_moment", 0.2),
 )
 RANK_LOWER = (
     ("macrel_hemo_prob", 0.8),
     ("aggregation_proxy", 0.4),
     ("n_liabilities", 0.3),
+    ("gravy", 0.2),
 )
 TOXIN_SAFE_WEIGHT = 1.0
 
@@ -44,6 +45,10 @@ NUMERIC_COLS = [c for c, _ in RANK_HIGHER] + [c for c, _ in RANK_LOWER] + [
     "LIS",
     "length",
     "net_charge_pH7.4",
+    "ampscanner_prob",
+    "macrel_amp_prob",
+    "hydramp_amp_prob",
+    "hydramp_mic_prob",
     "toxinpred_hybrid_score",
 ]
 
