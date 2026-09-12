@@ -292,7 +292,9 @@ def main() -> int:
         if args.dry_run:
             continue
         target_out.mkdir(parents=True, exist_ok=True)
-        subprocess.run(command, cwd=str(rfdiffusion_dir), check=True)
+        rf_env = os.environ.copy()
+        rf_env.pop("PYTHONPATH", None)
+        subprocess.run(command, cwd=str(rfdiffusion_dir), env=rf_env, check=True)
         if not args.skip_metadata:
             wrote = write_inverse_folding_metadata(target_out, target, chain_id)
             print(f"[{target}] wrote {wrote} inverse-folding metadata files")

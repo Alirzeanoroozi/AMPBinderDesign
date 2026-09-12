@@ -62,6 +62,27 @@ if [[ "${RUN_RFDIFFUSION:-0}" == "1" ]]; then
   : "${RFDIFFUSION_REPO:?Set RFDIFFUSION_REPO=/path/to/RFdiffusion}"
   RFDIFFUSION_ENV="${RFDIFFUSION_ENV:-SE3nv}"
   conda activate "${RFDIFFUSION_ENV}"
+  python - <<'PY'
+import importlib.util
+import sys
+import torch
+
+required = ["rfdiffusion", "dgl", "hydra", "omegaconf", "se3_transformer"]
+missing = [name for name in required if importlib.util.find_spec(name) is None]
+if missing:
+    raise SystemExit(f"Missing RFdiffusion dependencies: {', '.join(missing)}")
+if torch.version.cuda is None:
+    raise SystemExit("RFdiffusion env has CPU-only Torch; install a CUDA-enabled Torch build.")
+if not torch.cuda.is_available():
+    raise SystemExit("CUDA Torch is installed, but no CUDA device is visible to this job.")
+print(
+    "RFdiffusion env OK:",
+    f"python={sys.executable}",
+    f"torch={torch.__version__}",
+    f"cuda={torch.version.cuda}",
+    f"device={torch.cuda.get_device_name(0)}",
+)
+PY
   python src/1_design/rfdiffusion.py \
     --rfdiffusion-dir "${RFDIFFUSION_REPO}" \
     --model-dir "${RFDIFFUSION_MODEL_DIR:-${RFDIFFUSION_REPO}/models}" \
@@ -72,8 +93,9 @@ if [[ "${RUN_RFDIFFUSION:-0}" == "1" ]]; then
     --noise "${RFDIFFUSION_NOISE:-0.5}"
 
   conda activate "${CONDA_ENV_NAME}"
-  python src/1_design/inverse_folding.py --design_dir rfdiffusion_outputs/KPC3 --output_dir rfdiffusion_outputs/KPC3_inverse_folding --skip_existing
-  python src/1_design/inverse_folding.py --design_dir rfdiffusion_outputs/NDM5 --output_dir rfdiffusion_outputs/NDM5_inverse_folding --skip_existing
+  export PYTHONPATH="${REPO_DIR}/src/1_design:${PYTHONPATH:-}"
+  python src/1_design/inverse_folding.py --design_dir rfdiffusion_outputs/KPC3 --output_dir rfdiffusion_outputs/KPC3_inverse_folding --suffix ".pdb" --skip_existing
+  python src/1_design/inverse_folding.py --design_dir rfdiffusion_outputs/NDM5 --output_dir rfdiffusion_outputs/NDM5_inverse_folding --suffix ".pdb" --skip_existing
   EXTRACT_OUTPUT_DIRS+=(rfdiffusion_outputs/KPC3_inverse_folding rfdiffusion_outputs/NDM5_inverse_folding)
 fi
 
