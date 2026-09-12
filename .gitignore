@@ -4,3 +4,5 @@ logs/*
 boltz_inputs/*
 boltz_results/*
 boltzgen_outputs/*
+rfdiffusion_inputs/manifest.csv
+rfdiffusion_outputs/*

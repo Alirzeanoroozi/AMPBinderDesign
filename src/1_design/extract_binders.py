@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
-"""
-Walk every CIF under boltzgen_outputs/ (all subdirectories) and write one FASTA
-per target. A file is assigned to NDM5.fasta or KPC3.fasta if its path/name
-contains that target string.
+"""Extract binder sequences from generated complexes.
 
-Binder = shortest protein chain (design outputs: chain B; inverse-fold: chain A).
+Walk every CIF/PDB under boltzgen_outputs/ or another design-output directory
+and write one FASTA per target. A file is assigned to NDM5.fasta or KPC3.fasta
+if its path/name contains that target string.
+
+Binder = shortest protein chain unless --binder-chain is supplied.
 Native CIFs (*_native.cif) are skipped.
 
 Usage (from AMPBinderDesign):
   conda activate ampbinder
-  python src/1_design/boltzgen_extract_binders.py
+  python src/1_design/extract_binders.py
 """
 from __future__ import annotations
 
@@ -18,7 +19,7 @@ import os
 from typing import Dict, List, Optional, Tuple
 
 from Bio import SeqIO
-from Bio.PDB import MMCIFParser
+from Bio.PDB import MMCIFParser, PDBParser
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
@@ -44,9 +45,22 @@ def chain_sequence(chain) -> str:
     return "".join(letters)
 
 
-def binder_sequence(cif_path: str, parser: MMCIFParser) -> Tuple[str, str]:
+def load_structure(path: str, cif_parser: MMCIFParser, pdb_parser: PDBParser):
+    if path.endswith(".cif"):
+        return cif_parser.get_structure(os.path.basename(path), path)
+    if path.endswith(".pdb"):
+        return pdb_parser.get_structure(os.path.basename(path), path)
+    raise ValueError(f"unsupported structure extension: {path}")
+
+
+def binder_sequence(
+    structure_path: str,
+    cif_parser: MMCIFParser,
+    pdb_parser: PDBParser,
+    binder_chain: Optional[str] = None,
+) -> Tuple[str, str]:
     """Return (binder_seq, chain_id) using the shortest amino-acid chain."""
-    structure = parser.get_structure(os.path.basename(cif_path), cif_path)
+    structure = load_structure(structure_path, cif_parser, pdb_parser)
     model = next(structure.get_models())
     chains: List[Tuple[str, str]] = []
     for chain in model:
@@ -54,7 +68,12 @@ def binder_sequence(cif_path: str, parser: MMCIFParser) -> Tuple[str, str]:
         if seq:
             chains.append((chain.id, seq))
     if not chains:
-        raise ValueError(f"no protein chains in {cif_path}")
+        raise ValueError(f"no protein chains in {structure_path}")
+    if binder_chain is not None:
+        for chain_id, seq in chains:
+            if chain_id == binder_chain:
+                return seq, chain_id
+        raise ValueError(f"binder chain {binder_chain!r} not found in {structure_path}")
     chain_id, seq = min(chains, key=lambda x: len(x[1]))
     return seq, chain_id
 
@@ -68,16 +87,18 @@ def target_from_path(path: str, targets: List[str]) -> Optional[str]:
     return max(hits, key=len)
 
 
-def list_cifs(directory: str, skip_native: bool = True) -> List[str]:
-    """All .cif files under directory, recursively."""
+def list_structures(directory: str, skip_native: bool = True) -> List[str]:
+    """All .cif/.pdb files under directory, recursively."""
     out = []
     if not os.path.isdir(directory):
         return out
     for root, _dirs, files in os.walk(directory):
         for name in files:
-            if not name.endswith(".cif"):
+            if not (name.endswith(".cif") or name.endswith(".pdb")):
                 continue
             if skip_native and "_native" in name:
+                continue
+            if os.path.basename(root) == "traj":
                 continue
             out.append(os.path.join(root, name))
     out.sort()
@@ -85,16 +106,21 @@ def list_cifs(directory: str, skip_native: bool = True) -> List[str]:
 
 
 def extract_all(
-    directory: str,
+    directories: List[str],
     targets: List[str],
+    binder_chain: Optional[str] = None,
 ) -> Dict[str, List[SeqRecord]]:
-    parser = MMCIFParser(QUIET=True)
+    cif_parser = MMCIFParser(QUIET=True)
+    pdb_parser = PDBParser(QUIET=True)
     records: Dict[str, List[SeqRecord]] = {t: [] for t in targets}
     seen_ids: Dict[str, Dict[str, int]] = {t: {} for t in targets}
-    paths = list_cifs(directory)
+    paths = []
+    for directory in directories:
+        paths.extend(list_structures(directory))
+    paths = sorted(set(paths))
     skipped = 0
     unmatched = 0
-    print(f"Found {len(paths)} CIFs under {directory}")
+    print(f"Found {len(paths)} structures under {', '.join(directories)}")
 
     for i, path in enumerate(paths, 1):
         target = target_from_path(path, targets)
@@ -109,7 +135,7 @@ def extract_all(
         else:
             seen_ids[target][stem] = 1
         try:
-            seq, chain_id = binder_sequence(path, parser)
+            seq, chain_id = binder_sequence(path, cif_parser, pdb_parser, binder_chain)
         except Exception as exc:
             print(f"  skip {stem}: {exc}")
             skipped += 1
@@ -118,7 +144,7 @@ def extract_all(
             print(f"  skip {stem}: empty binder sequence")
             skipped += 1
             continue
-        rel = os.path.relpath(path, directory)
+        rel = os.path.relpath(path, REPO)
         records[target].append(
             SeqRecord(
                 Seq(seq),
@@ -143,8 +169,9 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument(
         "--outputs-dir",
-        default=os.path.join(REPO, "boltzgen_outputs"),
-        help="root to recurse for CIF files",
+        nargs="+",
+        default=[os.path.join(REPO, "boltzgen_outputs")],
+        help="one or more roots to recurse for CIF/PDB files",
     )
     ap.add_argument(
         "--out-dir",
@@ -152,9 +179,14 @@ def main() -> int:
         help="directory for NDM5.fasta and KPC3.fasta",
     )
     ap.add_argument("--targets", nargs="+", default=["NDM5", "KPC3"])
+    ap.add_argument(
+        "--binder-chain",
+        default=None,
+        help="extract this chain instead of choosing the shortest protein chain",
+    )
     args = ap.parse_args()
 
-    by_target = extract_all(args.outputs_dir, args.targets)
+    by_target = extract_all(args.outputs_dir, args.targets, args.binder_chain)
     for target, recs in by_target.items():
         write_fasta(recs, os.path.join(args.out_dir, f"{target}.fasta"))
     return 0

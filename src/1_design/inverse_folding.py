@@ -1,7 +1,8 @@
-import torch
-torch.set_grad_enabled(False)
 import argparse
+
+import torch
 from pytorch_lightning import Trainer
+torch.set_grad_enabled(False)
 
 from boltzgen.task.predict.data_from_generated import FromGeneratedDataModule, DataConfig
 from boltzgen.data.tokenize.tokenizer import Tokenizer
@@ -16,24 +17,30 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--design_dir", type=str, default="outputs/test_design_rbx1_mine/intermediate_designs")
     parser.add_argument("--output_dir", type=str, default="outputs/test_design_rbx1_mine/inverse_folding/")
+    parser.add_argument("--moldir", type=str, default=MOL_DIR)
+    parser.add_argument("--checkpoint", type=str, default=CHECKPOINT)
+    parser.add_argument("--multiplicity", type=int, default=10)
+    parser.add_argument("--samples_per_target", type=int, default=1000000000)
+    parser.add_argument("--num_workers", type=int, default=1)
+    parser.add_argument("--skip_existing", action="store_true")
     args = parser.parse_args()
 
     data_config = DataConfig(
-        moldir=MOL_DIR,
-        multiplicity=10,
+        moldir=args.moldir,
+        multiplicity=args.multiplicity,
         tokenizer=Tokenizer(atomize_modified_residues=False,),
         featurizer=Featurizer(), # TODO: Add featurizer from config
         suffix=".cif",
         suffix_metadata=".npz",
         suffix_native="_native.cif",
-        samples_per_target=1000000000,
+        samples_per_target=args.samples_per_target,
         design=True,
         backbone_only=True,
         atom14=False,
         max_seqs=1,
         inverse_fold=True,
         batch_size=1,
-        num_workers=1,
+        num_workers=args.num_workers,
         pin_memory=True,
         num_targets=1000000000,
         design_mask_override=None
@@ -44,7 +51,7 @@ if __name__ == "__main__":
         fail_if_no_designs=True,
         design_dir=args.design_dir,
         output_dir=args.output_dir,
-        skip_existing=False,
+        skip_existing=args.skip_existing,
         skip_existing_kind="inverse_fold",
     )
 
@@ -111,7 +118,7 @@ if __name__ == "__main__":
 
     # Load model
     model_module = Boltz.load_from_checkpoint(
-        CHECKPOINT,
+        args.checkpoint,
         strict=True,
         use_ema=False,
         checkpoint_diffusion_conditioning=False,
