@@ -22,6 +22,7 @@ if __name__ == "__main__":
     parser.add_argument("--multiplicity", type=int, default=10)
     parser.add_argument("--samples_per_target", type=int, default=1000000000)
     parser.add_argument("--num_workers", type=int, default=1)
+    parser.add_argument("--suffix", type=str, default=".cif", help="generated structure suffix to read")
     parser.add_argument("--skip_existing", action="store_true")
     args = parser.parse_args()
 
@@ -30,7 +31,7 @@ if __name__ == "__main__":
         multiplicity=args.multiplicity,
         tokenizer=Tokenizer(atomize_modified_residues=False,),
         featurizer=Featurizer(), # TODO: Add featurizer from config
-        suffix=".cif",
+        suffix=args.suffix,
         suffix_metadata=".npz",
         suffix_native="_native.cif",
         samples_per_target=args.samples_per_target,
