@@ -1,9 +1,10 @@
-"""Shared ranking helpers for the delivery + structure panel.
+"""Shared ranking helpers for the structure panel.
 
-The filtered pool is selected for peptide developability and Gram-negative
-outer-membrane/periplasmic-delivery proxy properties. Ranking therefore uses
-Boltz-2 interface confidence, ipSAE, and active-site overlap, with delivery,
-toxin, hemolysis, aggregation, and developability as secondary terms.
+The filtered pool is selected for generic peptide developability and safety
+only. Ranking uses Boltz-2 interface confidence, ipSAE, and active-site
+overlap, with toxin, hemolysis, aggregation, and synthesis liabilities as
+secondary terms. AMP-likeness and cationic/amphipathic delivery proxies are
+annotations, never objectives.
 """
 from __future__ import annotations
 
@@ -15,21 +16,23 @@ TARGETS = ("NDM5", "KPC3")
 COLORS = {"NDM5": "#1f77b4", "KPC3": "#ff7f0e"}
 
 # Percentile-rank weights (within target). Higher weight = more influence.
+# Ranking is interface quality + epitope coverage only, plus developability
+# penalties. Cationic/amphipathic "delivery proxy" terms (delivery_proxy,
+# hydrophobic_moment, gravy) were deliberately removed: they are the biophysics
+# of a membrane-lytic AMP, so weighting them reimposes the AMP objective on an
+# enzyme-inhibitor design task. They remain in NUMERIC_COLS as annotations.
 RANK_HIGHER = (
     ("boltz2_iptm", 2.5),
-    ("ipSAE_min", 1.5),
+    ("ipSAE", 1.5),
     ("epitope_recall", 1.5),
     ("n_catalytic_contacts", 1.0),
     ("interface_precision", 0.8),
     ("pDockQ", 0.6),
-    ("delivery_proxy", 0.6),
-    ("hydrophobic_moment", 0.2),
 )
 RANK_LOWER = (
     ("macrel_hemo_prob", 0.8),
     ("aggregation_proxy", 0.4),
     ("n_liabilities", 0.3),
-    ("gravy", 0.2),
 )
 TOXIN_SAFE_WEIGHT = 1.0
 
@@ -40,6 +43,7 @@ DEFAULT_MAX_IDENTITY = 0.8
 NUMERIC_COLS = [c for c, _ in RANK_HIGHER] + [c for c, _ in RANK_LOWER] + [
     "boltz2_ptm",
     "boltz2_plddt",
+    "ipSAE_min",
     "ipSAE_max",
     "pDockQ2",
     "LIS",
@@ -50,6 +54,9 @@ NUMERIC_COLS = [c for c, _ in RANK_HIGHER] + [c for c, _ in RANK_LOWER] + [
     "hydramp_amp_prob",
     "hydramp_mic_prob",
     "toxinpred_hybrid_score",
+    "delivery_proxy",
+    "hydrophobic_moment",
+    "gravy",
 ]
 
 

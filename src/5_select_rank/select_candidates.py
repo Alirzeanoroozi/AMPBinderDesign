@@ -48,6 +48,7 @@ PREFERRED_COLS = [
     "boltz2_iptm",
     "boltz2_ptm",
     "boltz2_plddt",
+    "ipSAE",
     "ipSAE_min",
     "ipSAE_max",
     "pDockQ",
@@ -98,7 +99,7 @@ def write_fasta(df: pd.DataFrame, path: Path) -> None:
             did = getattr(r, "design_id", "")
             seq = getattr(r, "sequence", "")
             iptm = getattr(r, "boltz2_iptm", "")
-            ipsae = getattr(r, "ipSAE_min", "")
+            ipsae = getattr(r, "ipSAE", "")
             rec = getattr(r, "epitope_recall", "")
             cat = getattr(r, "n_catalytic_contacts", "")
             score = getattr(r, "rank_score", "")

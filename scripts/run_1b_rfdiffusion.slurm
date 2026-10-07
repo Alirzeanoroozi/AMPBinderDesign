@@ -2,12 +2,12 @@
 #SBATCH --job-name=run_1b_rfdiffusion
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=16
+#SBATCH --cpus-per-task=1
 #SBATCH --partition=kutem_gpu
 #SBATCH --account=kutem
-#SBATCH --gres=gpu:tesla_a100:1
+#SBATCH --gres=gpu:1
 #SBATCH --time=72:00:00
-#SBATCH --mem=200G
+#SBATCH --mem=48G
 #SBATCH --output=logs/1b_rfdiffusion-%j.out
 #SBATCH --error=logs/1b_rfdiffusion-%j.out
 
@@ -41,7 +41,9 @@ CONDA_BASE="$(conda info --base)"
 source "${CONDA_BASE}/etc/profile.d/conda.sh"
 export LD_LIBRARY_PATH="${CONDA_BASE}/lib:${LD_LIBRARY_PATH:-}"
 
+set +u
 conda activate "${RFDIFFUSION_ENV}"
+set -u
 python - <<'PY'
 import importlib.util
 import sys
@@ -63,24 +65,67 @@ print(
     f"device={torch.cuda.get_device_name(0)}",
 )
 PY
-python src/1_design/rfdiffusion.py \
-  --targets ${TARGETS} \
-  --rfdiffusion-dir "${RFDIFFUSION_REPO}" \
-  --model-dir "${RFDIFFUSION_MODEL_DIR}" \
-  --out-dir rfdiffusion_outputs \
-  --num-designs "${RFDIFFUSION_NUM_DESIGNS}" \
-  --binder-len "${RFDIFFUSION_BINDER_LEN}" \
-  --hotspot-limit "${RFDIFFUSION_HOTSPOT_LIMIT}" \
-  --noise "${RFDIFFUSION_NOISE}"
-
-conda activate "${CONDA_ENV_NAME}"
-export PYTHONPATH="${REPO_DIR}/src/1_design:${PYTHONPATH:-}"
+GEN_TARGETS=""
 for target in ${TARGETS}; do
-  python src/1_design/inverse_folding.py \
-    --design_dir "rfdiffusion_outputs/${target}" \
-    --output_dir "rfdiffusion_outputs/${target}_inverse_folding" \
-    --moldir "${MOL_DIR}" \
-    --checkpoint "${IFOLD_CHECKPOINT}" \
-    --suffix ".pdb" \
-    --skip_existing
+  existing=$(ls "rfdiffusion_outputs/${target}/${target}"_*.pdb 2>/dev/null | wc -l)
+  if [[ "${existing}" -lt "${RFDIFFUSION_NUM_DESIGNS}" ]]; then
+    GEN_TARGETS="${GEN_TARGETS} ${target}"
+  else
+    echo "Skipping RFdiffusion generation for ${target}: ${existing}/${RFDIFFUSION_NUM_DESIGNS} raw designs already on disk"
+  fi
+done
+
+if [[ -n "${GEN_TARGETS}" ]]; then
+  python src/1_design/rfdiffusion.py \
+    --targets ${GEN_TARGETS} \
+    --rfdiffusion-dir "${RFDIFFUSION_REPO}" \
+    --model-dir "${RFDIFFUSION_MODEL_DIR}" \
+    --out-dir rfdiffusion_outputs \
+    --num-designs "${RFDIFFUSION_NUM_DESIGNS}" \
+    --binder-len "${RFDIFFUSION_BINDER_LEN}" \
+    --hotspot-limit "${RFDIFFUSION_HOTSPOT_LIMIT}" \
+    --noise "${RFDIFFUSION_NOISE}"
+fi
+
+set +u
+conda activate "${CONDA_ENV_NAME}"
+set -u
+export PYTHONPATH="${REPO_DIR}/src/1_design:${PYTHONPATH:-}"
+IFOLD_MULTIPLICITY="${IFOLD_MULTIPLICITY:-10}"
+for target in ${TARGETS}; do
+  design_dir="rfdiffusion_outputs/${target}"
+  output_dir="rfdiffusion_outputs/${target}_inverse_folding"
+  pending_dir="rfdiffusion_outputs/${target}_ifold_pending"
+
+  # inverse_folding.py's own --skip_existing compares against "<stem>.cif",
+  # but this pipeline writes one file per sequence variant, "<stem>_N.cif"
+  # for N in [0, multiplicity), so it never matches. A design is only truly
+  # done once all IFOLD_MULTIPLICITY variant files exist; pre-filter to a
+  # symlink dir of designs missing any variant so a rerun resumes correctly.
+  rm -rf "${pending_dir}"
+  mkdir -p "${pending_dir}"
+  pending_count=0
+  for pdb in "${design_dir}/${target}"_*.pdb; do
+    stem="$(basename "${pdb}" .pdb)"
+    have=$(ls "${output_dir}/${stem}_"*.cif 2>/dev/null | wc -l)
+    if [[ "${have}" -lt "${IFOLD_MULTIPLICITY}" ]]; then
+      for f in "${design_dir}/${stem}".*; do
+        ln -sf "$(readlink -f "${f}")" "${pending_dir}/"
+      done
+      pending_count=$((pending_count + 1))
+    fi
+  done
+  echo "${target}: ${pending_count}/${RFDIFFUSION_NUM_DESIGNS} designs still need inverse folding (need ${IFOLD_MULTIPLICITY} variants each)"
+
+  if [[ "${pending_count}" -gt 0 ]]; then
+    python src/1_design/inverse_folding.py \
+      --design_dir "${pending_dir}" \
+      --output_dir "${output_dir}" \
+      --moldir "${MOL_DIR}" \
+      --checkpoint "${IFOLD_CHECKPOINT}" \
+      --suffix ".pdb"
+  else
+    echo "${target}: inverse folding already complete, skipping"
+  fi
+  rm -rf "${pending_dir}"
 done

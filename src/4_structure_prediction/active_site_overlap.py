@@ -34,9 +34,11 @@ import sys
 import numpy as np
 from Bio import SeqIO
 
-# BoltzGen prefixes ranked complexes with "rank####_"; Boltz-2 writes
-# <design_id>_model_0.cif. Strip both so the CSV key matches filtered FASTA ids.
-_RANK_PREFIX_RE = re.compile(r"^rank\d+_", re.IGNORECASE)
+# Boltz-2 writes <design_id>_model_0.cif. Strip only the model suffix: the
+# design_id may legitimately start with "rank####_" (BoltzGen's ranked
+# designs), and prepare_configs.py names the prediction directory after the
+# full design_id, so stripping that prefix would key these rows to ids that
+# do not exist in the filtered FASTA.
 _MODEL_SUFFIX_RE = re.compile(r"_model_\d+$", re.IGNORECASE)
 _SKIP_DIR_PARTS = {"processed", "mols", "msa"}
 _DEFAULT_COMPLEXES = os.path.join(
@@ -46,7 +48,6 @@ _DEFAULT_COMPLEXES = os.path.join(
 
 def _design_id_from_path(path: str) -> str:
     stem = os.path.splitext(os.path.basename(path))[0]
-    stem = _RANK_PREFIX_RE.sub("", stem)
     return _MODEL_SUFFIX_RE.sub("", stem)
 
 

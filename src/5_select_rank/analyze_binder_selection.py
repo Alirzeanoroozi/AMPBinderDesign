@@ -34,6 +34,7 @@ from ranking import (  # noqa: E402
 CORR_COLS = [
     "rank_score",
     "boltz2_iptm",
+    "ipSAE",
     "ipSAE_min",
     "epitope_recall",
     "interface_precision",
@@ -175,20 +176,20 @@ def plot_ipsae_violin(df: pd.DataFrame, sel: pd.DataFrame, ax=None):
     own = ax is None
     if own:
         fig, ax = plt.subplots(figsize=(6.2, 4.6))
-    _violin(ax, df, "ipSAE_min")
-    if not sel.empty and "ipSAE_min" in sel.columns:
+    _violin(ax, df, "ipSAE")
+    if not sel.empty and "ipSAE" in sel.columns:
         sns.stripplot(
             data=sel,
             x="target",
-            y="ipSAE_min",
+            y="ipSAE",
             color="#111111",
             size=6,
             jitter=0.12,
             ax=ax,
         )
-    ax.set_ylabel("ipSAE_min")
+    ax.set_ylabel("ipSAE")
     ax.set_xlabel("")
-    ax.set_title("ipSAE_min (asymmetric A↔B, cutoffs 10 Å)")
+    ax.set_title("ipSAE (max of asymmetric A→B / B→A, cutoffs 10 Å)")
     if own:
         return fig
     return ax
@@ -366,7 +367,7 @@ def plot_selected_metrics(sel: pd.DataFrame, out_dir: Path) -> None:
         return
     metrics = [
         ("boltz2_iptm", "iPTM"),
-        ("ipSAE_min", "ipSAE_min"),
+        ("ipSAE", "ipSAE"),
         ("epitope_recall", "epitope recall"),
         ("interface_precision", "interface precision"),
     ]

@@ -1,5 +1,5 @@
 {
-  "_comment": "Hard gates for the structure-prediction panel. No ranking. A design passes if every gate that has a value on that row succeeds; a missing value skips that gate (e.g. catalytic_ok is not available until structure scoring). These gates intentionally do not require traditional AMP-likeness. They use peptide developability plus outer-membrane/periplasmic-delivery proxy properties for Gram-negative bacteria.",
+  "_comment": "Hard gates for the structure-prediction panel. No ranking. A design passes if every gate that has a value on that row succeeds; a missing value skips that gate (e.g. catalytic_ok is not available until structure scoring). These gates do not require AMP-likeness, and they deliberately do NOT gate on net charge, hydrophobic moment or any cationic/amphipathic 'delivery proxy': cationic+amphipathic is the biophysical definition of a membrane-lytic AMP, so gating on it reimposes the AMP objective and preferentially discards good binders, which against NDM-5/KPC-3 are net acidic. Those descriptors are still computed and carried in the manifest as annotations.",
 
   "gates": {
     "toxinpred_non_toxin": {
@@ -22,36 +22,16 @@
       "equals": "True",
       "reason": "does not contact the catalytic core"
     },
-    "net_charge_min": {
-      "column": "net_charge_pH7.4",
-      "min": 1.0,
-      "reason": "net charge at pH 7.4 below periplasmic-delivery floor (+1)"
-    },
-    "net_charge_max": {
-      "column": "net_charge_pH7.4",
-      "max": 8.0,
-      "reason": "net charge at pH 7.4 above moderate-delivery ceiling (+8)"
-    },
-    "hydrophobic_moment": {
-      "column": "hydrophobic_moment",
-      "min": 0.25,
-      "reason": "hydrophobic moment below amphipathicity floor (0.25)"
-    },
-    "delivery_proxy": {
-      "column": "delivery_proxy",
-      "min": 0.35,
-      "reason": "periplasmic-delivery proxy below 0.35"
-    },
-    "gravy": {
-      "column": "gravy",
-      "max": 1.2,
-      "reason": "mean hydrophobicity too high for soluble/non-lytic delivery"
-    },
     "length": {
       "column": "length",
       "min": 12,
       "max": 45,
       "reason": "length outside [12, 45]"
+    },
+    "max_aa_fraction": {
+      "column": "max_aa_fraction",
+      "max": 0.4,
+      "reason": "low-complexity: >40% of the sequence is a single amino acid"
     },
     "n_liabilities": {
       "column": "n_liabilities",

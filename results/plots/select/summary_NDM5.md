@@ -1,47 +1,51 @@
-AMPBinderDesign panel summary: NDM5  /scratch/anoroozi25/AMPBinderDesign/results/ranked_NDM5.csv  (157 designs)
+AMPBinderDesign panel summary: NDM5  /scratch/esevinc22/AMPBinderDesign/AMPBinderDesign/results/ranked_NDM5.csv  (7854 designs)
 
-INHIBITOR GATE  catalytic_ok=True: 95/157  (60.5%)   [STRONG]
+INHIBITOR GATE  catalytic_ok=True: 1718/7854  (21.9%)   [MARGINAL]
 
-STRUCTURE GATE  catalytic_ok and iPTM>=0.5: 42/157  (26.8%)
+STRUCTURE GATE  catalytic_ok and iPTM>=0.5: 1118/7854  (14.2%)
 
-STRUCTURE GATES  pass: 42/157 (26.8%)
+STRUCTURE GATES  pass: 1118/7854 (14.2%)
 
 metric                                         n       min       q25    median       q75       max
 ----------------------------------------------------------------------------------------------------
-Boltz-2 iPTM                                 157     0.161      0.36     0.457     0.624     0.855
-ipSAE_min (A↔B)                              157         0         0    0.0117    0.0214      0.24
-Active-site coverage                         157         0         0      0.25       0.6      0.85
-Interface focus on epitope                   157         0         0     0.289      0.52     0.833
-# catalytic-core contacts                    157         0         0         1         4         6
-pDockQ                                       157    0.0618     0.133      0.18     0.259     0.527
-LIS                                          157         0    0.0244    0.0839     0.219     0.575
-Boltz-2 complex pLDDT                        157     0.841     0.873     0.887     0.902     0.939
-AMPScanner P(AMP)                            157     0.512     0.943     0.999         1         1
-Macrel P(AMP)                                157     0.505     0.515     0.525     0.564     0.743
-Macrel P(hemolytic)                          157     0.119     0.386     0.515     0.564     0.921
-Binder length (aa)                           157        12        26        31        41        49
-Net charge at pH 7.4                         157     -2.25     -1.02     -0.99      0.97      5.01
-Periplasmic-delivery proxy                   157     0.022     0.124      0.16     0.432     0.918
-Aggregation proxy                            157      -0.4      1.77       1.8      2.36      3.06
-# synthesis liabilities                      157         0         1         1         1         3
-Composite rank score                         157     0.243     0.452      0.53     0.658      0.86
+Boltz-2 iPTM                                3187    0.0526     0.363      0.52     0.667     0.951
+ipSAE (max of A→B, B→A)                     3187         0         0    0.0148     0.187     0.866
+ipSAE_min (d0-floored for short binders)    3187         0         0    0.0122    0.0294      0.65
+Active-site coverage                        3187         0         0      0.25       0.6       0.9
+Interface focus on epitope                  3187         0         0     0.333     0.565         1
+# catalytic-core contacts                   3187         0         0         1         3         6
+pDockQ                                      3187         0    0.0945     0.138       0.2     0.582
+LIS                                         3187         0    0.0273     0.107     0.257     0.723
+Boltz-2 complex pLDDT                       3187     0.816     0.893     0.907      0.92     0.966
+AMPScanner P(AMP annotation)                7854    0.0002    0.0041    0.0121    0.0405         1
+Macrel P(AMP annotation)                    7854         0     0.089     0.149     0.228     0.713
+Macrel P(hemolytic)                         7854         0      0.05     0.089     0.139     0.495
+Binder length (aa)                          7854        12        20        29        38        45
+Net charge at pH 7.4                        7854       -12     -4.02     -2.02     -0.99      5.97
+Periplasmic-delivery proxy                  7854     0.021     0.373     0.481       0.5     0.998
+Aggregation proxy                           7854     -2.41     0.443     0.957      1.47       2.5
+# synthesis liabilities                     7854         0         0         0         1         2
+Composite rank score                        7854     0.102     0.166     0.197     0.479     0.933
 
 TOP 10 BY rank_score:
   design_id                       rank   iPTM   ipSAE   eRec  #cat    L  charge
-  NDM5_1471                      0.860   0.67   0.025   0.75     5   26    +1.0
-  NDM5_266_0                     0.857   0.82   0.138   0.75     5   27    -0.0
-  NDM5_1416                      0.846   0.84   0.099   0.70     5   22    -1.0
-  NDM5_4682                      0.831   0.74   0.075   0.75     5   15    -0.0
-  NDM5_790                       0.811   0.77   0.073   0.60     2   29    +1.6
-  NDM5_630_0                     0.809   0.75   0.055   0.70     3   18    -0.0
-  NDM5_737                       0.806   0.72   0.042   0.85     6   21    -1.4
-  NDM5_0637                      0.804   0.76   0.051   0.70     4   26    -1.0
-  NDM5_434                       0.803   0.75   0.092   0.75     6   36    -2.2
-  NDM5_659                       0.799   0.74   0.042   0.80     6   20    +3.0
+  NDM5_0833                      0.933   0.91   0.733   0.80   6.0   22    -1.1
+  NDM5_4051                      0.932   0.81   0.506   0.90   6.0   19    +0.9
+  NDM5_4819                      0.929   0.83   0.493   0.75   4.0   13    -1.0
+  NDM5_10_1                      0.927   0.81   0.390   0.80   6.0   13    -0.0
+  NDM5_1778                      0.924   0.89   0.716   0.70   6.0   26    -1.0
+  NDM5_423_7                     0.924   0.86   0.493   0.70   5.0   12    -1.0
+  rank0070_NDM5_0374             0.922   0.88   0.721   0.80   5.0   25    -5.1
+  NDM5_663_6                     0.921   0.91   0.672   0.60   6.0   13    -0.0
+  NDM5_4423                      0.915   0.77   0.456   0.85   6.0   23    -3.1
+  NDM5_1045                      0.910   0.83   0.537   0.80   6.0   25    -4.1
 
 WET-LAB READINESS:
-  Pool is already AMP-positive (AMPScanner + Macrel). Rank by Boltz-2 iPTM,
-  ipSAE_min, and epitope coverage; require catalytic_ok for the shipped panel.
+  Pool is filtered for periplasmic-delivery proxy and generic peptide
+  developability, not traditional AMP-likeness. Rank by Boltz-2 iPTM,
+  ipSAE, and epitope coverage; require catalytic_ok for the shipped panel.
   - catalytic_ok + iPTM>=0.5 yield large enough for n=25: ship that panel.
-  - ipSAE_min is typically low here; treat it as a tie-breaker, not a hard cut.
-  - Hemolysis is common among AMPs; prefer NonHemo but do not empty the panel.
+  - ipSAE is the max of the two asymmetric directions (Dunbrack's reported
+    value). ipSAE_min is also shown but is pinned near the d0 floor for
+    binders <= 27 residues, so it does not discriminate.
+  - Hemolysis and toxicity are exclusion risks for delivery-focused binders.

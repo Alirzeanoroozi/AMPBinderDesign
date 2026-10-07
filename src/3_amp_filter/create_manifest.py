@@ -62,6 +62,7 @@ DEV_NUMERIC = [
     "hydrophobic_moment",
     "aggregation_proxy",
     "cys_count",
+    "max_aa_fraction",
     "delivery_proxy",
     "n_liabilities",
 ]
@@ -229,6 +230,7 @@ def build_target_manifest(clf: pd.DataFrame, dev: pd.DataFrame, target: str) -> 
     col_order = [
         "design_id",
         "target",
+        "source",
         "sequence",
         "length",
         "ampscanner_class",
@@ -251,6 +253,7 @@ def build_target_manifest(clf: pd.DataFrame, dev: pd.DataFrame, target: str) -> 
         "hydrophobic_moment",
         "aggregation_proxy",
         "cys_count",
+        "max_aa_fraction",
         "delivery_proxy",
         "n_liabilities",
         "liabilities",

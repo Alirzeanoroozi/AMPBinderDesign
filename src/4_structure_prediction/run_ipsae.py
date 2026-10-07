@@ -31,12 +31,12 @@ TARGETS = ("NDM5", "KPC3")
 TARGET_CHAIN = "A"
 BINDER_CHAIN = "B"
 IPSAE_EXTRA = ("ipSAE_d0chn", "ipSAE_d0dom", "ipTM_af", "pDockQ", "pDockQ2", "LIS")
-_RANK_PREFIX_RE = re.compile(r"^rank\d+_", re.IGNORECASE)
 _MODEL_SUFFIX_RE = re.compile(r"_model_\d+$", re.IGNORECASE)
 _SKIP_DIR_PARTS = {"processed", "mols", "msa"}
 
 COLS = [
     "design_id",
+    "ipSAE",
     "ipSAE_min",
     "ipSAE_max",
     "ipSAE_d0chn",
@@ -50,7 +50,14 @@ COLS = [
 
 
 def design_id_from_stem(stem: str) -> str:
-    stem = _RANK_PREFIX_RE.sub("", stem)
+    """design_id == the Boltz-2 prediction stem minus the _model_N suffix.
+
+    Do NOT strip a leading "rank####_": prepare_configs.py names the YAML and
+    hence the prediction directory after the full design_id, and ranked
+    BoltzGen designs legitimately carry that prefix in the filtered FASTA.
+    Stripping it here (while parse_boltz2.py did not) made this stage key its
+    rows differently from the rest of stage 4.
+    """
     return _MODEL_SUFFIX_RE.sub("", stem)
 
 
@@ -85,6 +92,15 @@ def parse_ipsae_summary(path: Path, target_chain: str, binder_chain: str) -> dic
     base = max_rows[0] if max_rows else max(rows, key=lambda r: as_float(r, "ipSAE") or 0.0)
 
     out = {}
+    # Dunbrack's reported per-pair value is the Type=max row: ipSAE is
+    # asymmetric and the maximum of the two directions is the score. The
+    # minimum is NOT a conservative version of it for a short peptide binder:
+    # that direction normalises d0 by the binder length, which pins d0 at its
+    # 1.04 A floor whenever the binder is <= 27 residues (89.5% of this run),
+    # crushing the value toward zero regardless of interface quality.
+    v = as_float(base, "ipSAE")
+    if v is not None:
+        out["ipSAE"] = v
     if asym:
         out["ipSAE_min"] = min(asym)
         out["ipSAE_max"] = max(asym)

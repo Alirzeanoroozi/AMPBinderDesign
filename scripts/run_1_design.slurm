@@ -6,7 +6,7 @@
 #SBATCH --account=kutem
 #SBATCH --gres=gpu:tesla_a100:1
 #SBATCH --time=72:00:00
-#SBATCH --mem=200G
+#SBATCH --mem=64G
 #SBATCH --output=logs/1_design-%j.out
 #SBATCH --error=logs/1_design-%j.out
 
@@ -33,11 +33,26 @@ CONDA_BASE="$(conda info --base)"
 source "${CONDA_BASE}/etc/profile.d/conda.sh"
 conda activate "${CONDA_ENV_NAME}"
 export LD_LIBRARY_PATH="${CONDA_BASE}/lib:${LD_LIBRARY_PATH:-}"
+export PYTHONPATH="${REPO_DIR}/src/1_design:${PYTHONPATH:-}"
 
 command -v boltzgen >/dev/null 2>&1 || {
   echo "boltzgen CLI not found in conda env ${CONDA_ENV_NAME}" >&2
   exit 1
 }
+
+python - <<'PY'
+from pathlib import Path
+import boltzgen
+import boltzgen.cli.boltzgen as cli
+
+paths = [Path(boltzgen.__file__).resolve(), Path(cli.__file__).resolve(), Path(cli.main_script).resolve()]
+for path in paths:
+    print(f"BoltzGen path: {path}")
+    if "/scratch/esevinc22/pepgen/" in str(path):
+        raise SystemExit(f"Refusing to run with PepGen-linked BoltzGen path: {path}")
+if not all("/AMPBinderDesign/AMPBinderDesign/src/1_design/boltzgen/" in str(path) for path in paths):
+    raise SystemExit(f"Unexpected BoltzGen import path(s): {paths}")
+PY
 
 # BoltzGen design path.
 for target in ${TARGETS}; do
@@ -51,7 +66,8 @@ for target in ${TARGETS}; do
   boltzgen run "${yaml}" \
     --output "${out_dir}" \
     --num_designs "${NUM_DESIGNS}" \
-    --budget "${BUDGET}"
+    --budget "${BUDGET}" \
+    --reuse
 done
 
 EXTRACT_OUTPUT_DIRS=(boltzgen_outputs)
@@ -61,7 +77,9 @@ EXTRACT_OUTPUT_DIRS=(boltzgen_outputs)
 if [[ "${RUN_RFDIFFUSION:-0}" == "1" ]]; then
   : "${RFDIFFUSION_REPO:?Set RFDIFFUSION_REPO=/path/to/RFdiffusion}"
   RFDIFFUSION_ENV="${RFDIFFUSION_ENV:-SE3nv}"
+  set +u
   conda activate "${RFDIFFUSION_ENV}"
+  set -u
   python - <<'PY'
 import importlib.util
 import sys
@@ -92,7 +110,9 @@ PY
     --hotspot-limit "${RFDIFFUSION_HOTSPOT_LIMIT:-0}" \
     --noise "${RFDIFFUSION_NOISE:-0.5}"
 
+  set +u
   conda activate "${CONDA_ENV_NAME}"
+  set -u
   export PYTHONPATH="${REPO_DIR}/src/1_design:${PYTHONPATH:-}"
   python src/1_design/inverse_folding.py --design_dir rfdiffusion_outputs/KPC3 --output_dir rfdiffusion_outputs/KPC3_inverse_folding --suffix ".pdb" --skip_existing
   python src/1_design/inverse_folding.py --design_dir rfdiffusion_outputs/NDM5 --output_dir rfdiffusion_outputs/NDM5_inverse_folding --suffix ".pdb" --skip_existing

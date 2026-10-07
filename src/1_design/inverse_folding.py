@@ -140,5 +140,8 @@ if __name__ == "__main__":
         precision="bf16-mixed",
     )
 
-    # Run training
-    lightning_trainer.predict(model_module, datamodule=data)
+    # Outputs are written to disk by the DesignWriter callback; the return
+    # value is unused, but Lightning still accumulates every batch's output
+    # in memory by default (return_predictions=True), causing RSS to grow
+    # unboundedly over the run. Disable it to keep memory flat.
+    lightning_trainer.predict(model_module, datamodule=data, return_predictions=False)

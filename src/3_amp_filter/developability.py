@@ -90,6 +90,21 @@ def liabilities(seq):
     return flags
 
 
+def max_aa_fraction(seq):
+    """Largest fraction taken by any single amino acid.
+
+    A crude low-complexity detector. Inverse folding sometimes returns runs
+    dominated by one residue (poly-Ala in particular); those are not credible
+    binders even though they fold and dock confidently.
+    """
+    if not seq:
+        return 0.0
+    counts = {}
+    for c in seq:
+        counts[c] = counts.get(c, 0) + 1
+    return max(counts.values()) / len(seq)
+
+
 def descriptors(seq):
     seq = "".join(c for c in seq.upper() if c.isalpha())
     q = net_charge(seq)
@@ -105,6 +120,7 @@ def descriptors(seq):
         "hydrophobic_moment": round(mu, 3),
         "aggregation_proxy": round(max_hydrophobic_window(seq), 3),
         "cys_count": seq.count("C"),
+        "max_aa_fraction": round(max_aa_fraction(seq), 3),
         "delivery_proxy": delivery,
         "n_liabilities": len(flags),
         "liabilities": ";".join(flags),
@@ -112,9 +128,20 @@ def descriptors(seq):
 
 
 def iter_seqs(args):
+    """Yield (design_id, sequence, source).
+
+    source is read from the FASTA description that extract_binders.py writes
+    (``source=boltzgen_final`` etc.) so design provenance survives into the
+    manifest instead of being dropped here. Empty when the field is absent.
+    """
     from Bio import SeqIO
     for rec in SeqIO.parse(args.fasta, "fasta"):
-        yield rec.id, str(rec.seq)
+        source = ""
+        for field in rec.description.split():
+            if field.startswith("source="):
+                source = field.split("=", 1)[1]
+                break
+        yield rec.id, str(rec.seq), source
 
 
 def main():
@@ -123,15 +150,17 @@ def main():
     ap.add_argument("--out", required=True)
     args = ap.parse_args()
 
-    cols = ["design_id", "length", "net_charge_pH7.4", "gravy", "hydrophobic_moment",
-            "aggregation_proxy", "cys_count", "delivery_proxy", "n_liabilities", "liabilities"]
+    cols = ["design_id", "source", "length", "net_charge_pH7.4", "gravy", "hydrophobic_moment",
+            "aggregation_proxy", "cys_count", "max_aa_fraction", "delivery_proxy",
+            "n_liabilities", "liabilities"]
     n = 0
     with open(args.out, "w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=cols)
         w.writeheader()
-        for did, seq in iter_seqs(args):
+        for did, seq, source in iter_seqs(args):
             d = descriptors(seq)
             d["design_id"] = did
+            d["source"] = source
             w.writerow(d)
             n += 1
     print(f"Computed developability for {n} designs -> {args.out}")

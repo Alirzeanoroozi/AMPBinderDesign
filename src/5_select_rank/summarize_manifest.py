@@ -23,7 +23,8 @@ from ranking import TARGETS, find_col, is_true  # noqa: E402
 
 KEY_METRICS = [
     ("boltz2_iptm", "Boltz-2 iPTM"),
-    ("ipSAE_min", "ipSAE_min (A↔B)"),
+    ("ipSAE", "ipSAE (max of A→B, B→A)"),
+    ("ipSAE_min", "ipSAE_min (d0-floored for short binders)"),
     ("epitope_recall", "Active-site coverage"),
     ("interface_precision", "Interface focus on epitope"),
     ("n_catalytic_contacts", "# catalytic-core contacts"),
@@ -147,7 +148,7 @@ def summarize(rows: list[dict], label: str, top_n: int) -> str:
             cL = find_col(keys, "length")
             cQ = find_col(keys, "net_charge_pH7.4")
             cIP = find_col(keys, "boltz2_iptm", "iptm")
-            cS = find_col(keys, "ipSAE_min")
+            cS = find_col(keys, "ipSAE")
             p(f"TOP {min(top_n, len(ranked))} BY rank_score:")
             p(
                 f"  {'design_id':<28} {'rank':>7} {'iPTM':>6} {'ipSAE':>7} "
@@ -183,9 +184,11 @@ def summarize(rows: list[dict], label: str, top_n: int) -> str:
     p("WET-LAB READINESS:")
     p("  Pool is filtered for periplasmic-delivery proxy and generic peptide")
     p("  developability, not traditional AMP-likeness. Rank by Boltz-2 iPTM,")
-    p("  ipSAE_min, and epitope coverage; require catalytic_ok for the shipped panel.")
+    p("  ipSAE, and epitope coverage; require catalytic_ok for the shipped panel.")
     p("  - catalytic_ok + iPTM>=0.5 yield large enough for n=25: ship that panel.")
-    p("  - ipSAE_min is typically low here; treat it as a tie-breaker, not a hard cut.")
+    p("  - ipSAE is the max of the two asymmetric directions (Dunbrack's reported")
+    p("    value). ipSAE_min is also shown but is pinned near the d0 floor for")
+    p("    binders <= 27 residues, so it does not discriminate.")
     p("  - Hemolysis and toxicity are exclusion risks for delivery-focused binders.")
     return "\n".join(out)
 

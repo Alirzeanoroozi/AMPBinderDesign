@@ -6,3 +6,11 @@ boltz_results/*
 boltzgen_outputs/*
 rfdiffusion_inputs/manifest.csv
 rfdiffusion_outputs/*
+.jid_1c
+.jid_3
+.jid_4
+.jid_5
+.last_backup_dir
+archive_pepgen_linked_20260921/
+backup_prefix_20261006_195110/
+boltz_inputs_prev_20261006/
