@@ -20,6 +20,32 @@ pre-inverse-folding placeholders competed as candidates and every real design
 was entered 3-4 times under different ids. This module classifies each file
 explicitly and keeps one record per distinct binder sequence.
 
+BoltzGen's own QC
+-----------------
+`boltzgen run` does not stop at inverse folding: its filter step refolds every
+design (in complex, design-chain-only, and in isolation), applies hard
+thresholds, then ranks by quality and diversity down to --budget. It rejects
+89.5% (NDM5) and 96.0% (KPC3) of its own inverse-folding output. That verdict
+is recorded per design in
+    boltzgen_outputs/<T>/final_ranked_designs/all_designs_metrics.csv
+as `pass_filters`. Harvesting intermediate_designs_inverse_folded wholesale
+therefore imports the ~90-96% BoltzGen had already judged unusable, which is
+where the low-complexity sequences came from.
+
+So boltzgen_ifold designs are admitted ONLY if BoltzGen marked them
+pass_filters=True. That yields the full QC-passing set (525 NDM5 / 201 KPC3)
+rather than just the diversity-selected top --budget, while excluding the
+designs BoltzGen rejected.
+
+The RFdiffusion arm originally had NO quality control of any kind, so it would
+have outnumbered the QC-passed BoltzGen arm ~20-50x with unselected designs.
+scripts/run_1d_rfdiffusion_qc.slurm now runs the SAME boltzgen filter steps
+(folding, design_folding, analysis, filtering) over the RFdiffusion
+inverse-folding output, and rfdiffusion_ifold is gated on that verdict too.
+Both arms therefore face identical criteria, including the refold-in-isolation
+check that nothing downstream can replicate. Pass --no-boltzgen-qc to disable
+gating for both.
+
 Binder = shortest protein chain unless --binder-chain is supplied.
 
 Usage (from AMPBinderDesign):
@@ -31,6 +57,7 @@ from __future__ import annotations
 import argparse
 import csv
 import os
+import re
 from collections import Counter
 from typing import Dict, List, Optional, Tuple
 
@@ -56,6 +83,52 @@ SOURCE_PRIORITY = ("boltzgen_final", "boltzgen_ifold", "rfdiffusion_ifold")
 
 # Any binder longer than this is assumed to be a misidentified target chain.
 DEFAULT_MAX_BINDER_LEN = 120
+
+
+# Where each QC-gated source's BoltzGen filter verdict lives, relative to REPO.
+# Both arms are gated on the SAME criteria: the RFdiffusion designs are put
+# through boltzgen's folding / design_folding / analysis / filtering steps by
+# scripts/run_1d_rfdiffusion_qc.slurm, which writes an all_designs_metrics.csv
+# in exactly the same format as the BoltzGen arm's.
+QC_METRICS = {
+    "boltzgen_final": "boltzgen_outputs/{target}/final_ranked_designs/all_designs_metrics.csv",
+    "boltzgen_ifold": "boltzgen_outputs/{target}/final_ranked_designs/all_designs_metrics.csv",
+    "rfdiffusion_ifold": "rfdiffusion_qc/{target}/final_ranked_designs/all_designs_metrics.csv",
+}
+
+# boltzgen_final was originally treated as QC-exempt on the assumption that
+# final_<budget>_designs/ only ever contains designs passing the filters. That
+# is FALSE: boltzgen writes `budget` designs regardless of how many passed, so
+# whenever fewer designs pass than the budget the directory is padded with
+# REJECTED designs. Measured on a 200-design run with budget 20: only 6 (NDM5)
+# and 8 (KPC3) passed, yet 20 were written - so 14/20 and 12/20 had failed QC,
+# including 5 and 2 that carried a cysteine. It is now gated like every other
+# source.
+#
+# Its filenames carry a rank prefix (rank001_NDM5_026) while the metrics table
+# keys on the bare design id (NDM5_026), so the prefix is stripped FOR THE QC
+# LOOKUP ONLY. The design_id itself keeps the prefix - stripping it there is the
+# stage-4 bug that silently discarded every ranked design's scores.
+_QC_ID_STRIP = {"boltzgen_final": re.compile(r"^rank\d+_", re.IGNORECASE)}
+
+
+def qc_lookup_id(source: str, stem: str) -> str:
+    rx = _QC_ID_STRIP.get(source)
+    return rx.sub("", stem) if rx else stem
+
+
+def qc_pass_set(path: str) -> Optional[set]:
+    """design ids a boltzgen filter step marked pass_filters=True, or None."""
+    if not os.path.isfile(path):
+        return None
+    ok: set = set()
+    with open(path, newline="") as fh:
+        for row in csv.DictReader(fh):
+            if str(row.get("pass_filters", "")).strip().lower() in ("true", "1", "1.0"):
+                did = (row.get("id") or "").strip()
+                if did:
+                    ok.add(did)
+    return ok
 
 
 def chain_sequence(chain) -> str:
@@ -165,10 +238,25 @@ def extract_all(
     sources: Optional[List[str]] = None,
     max_binder_len: int = DEFAULT_MAX_BINDER_LEN,
     allow_unclassified: bool = False,
+    use_boltzgen_qc: bool = True,
 ) -> Tuple[Dict[str, List[SeqRecord]], Dict[str, List[dict]]]:
     cif_parser = MMCIFParser(QUIET=True)
     pdb_parser = PDBParser(QUIET=True)
     wanted = set(sources or SOURCE_PRIORITY)
+
+    # qc[(target, source)] -> set of ids passing that source's QC, or None
+    qc: Dict[tuple, Optional[set]] = {}
+    if use_boltzgen_qc:
+        for t in targets:
+            for src, tmpl in QC_METRICS.items():
+                path = os.path.join(REPO, tmpl.format(target=t))
+                got = qc_pass_set(path)
+                qc[(t, src)] = got
+                if got is None:
+                    print(f"  [{t}] WARNING: {src} is NOT QC-gated "
+                          f"(missing {os.path.relpath(path, REPO)})")
+                else:
+                    print(f"  [{t}] {src}: {len(got)} designs passed boltzgen QC")
 
     paths = []
     for directory in directories:
@@ -199,6 +287,15 @@ def extract_all(
         if source not in wanted and source != "unclassified":
             rejected[f"source_not_selected:{source}"] += 1
             continue
+        # Honour the boltzgen filter verdict for every QC-gated source rather
+        # than re-deriving a worse one downstream. Applied identically to both
+        # design arms so neither enters the pool unselected.
+        passed = qc.get((target, source))
+        if passed is not None:
+            stem_id = os.path.splitext(os.path.basename(path))[0]
+            if qc_lookup_id(source, stem_id) not in passed:
+                rejected[f"qc_rejected:{source}"] += 1
+                continue
 
         try:
             seq, chain_id = binder_sequence(path, cif_parser, pdb_parser, binder_chain)
@@ -220,6 +317,8 @@ def extract_all(
             "design_id": design_id,
             "target": target,
             "source": source,
+            "boltzgen_qc": ("pass" if qc.get((target, source)) is not None
+                            else ("ungated" if source in QC_METRICS else "n/a")),
             "chain": chain_id,
             "length": len(seq),
             "sequence": seq,
@@ -284,12 +383,13 @@ def write_fasta(records: List[SeqRecord], path: str) -> None:
 
 def write_provenance(rows: List[dict], path: str) -> None:
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
-    cols = ["design_id", "target", "source", "chain", "length", "sequence", "file"]
+    cols = ["design_id", "target", "source", "boltzgen_qc", "chain", "length",
+            "sequence", "file"]
     with open(path, "w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=cols)
         w.writeheader()
         for r in rows:
-            w.writerow({c: r[c] for c in cols})
+            w.writerow({c: r.get(c, "") for c in cols})
     print(f"  wrote {len(rows)} rows -> {path}")
 
 
@@ -326,6 +426,12 @@ def main() -> int:
         help="reject a 'binder' longer than this; guards against picking a target chain",
     )
     ap.add_argument(
+        "--no-boltzgen-qc",
+        action="store_true",
+        help="do NOT gate boltzgen_ifold on BoltzGen's own pass_filters verdict "
+             "(restores the old behaviour of importing its pre-QC output)",
+    )
+    ap.add_argument(
         "--allow-unclassified",
         action="store_true",
         help="also keep structures in directories this script does not recognise",
@@ -339,6 +445,7 @@ def main() -> int:
         sources=args.sources,
         max_binder_len=args.max_binder_len,
         allow_unclassified=args.allow_unclassified,
+        use_boltzgen_qc=not args.no_boltzgen_qc,
     )
     for target, recs in by_target.items():
         write_fasta(recs, os.path.join(args.out_dir, f"{target}.fasta"))

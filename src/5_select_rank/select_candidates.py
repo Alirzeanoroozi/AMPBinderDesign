@@ -28,6 +28,9 @@ REPO = HERE.parent.parent
 sys.path.insert(0, str(HERE))
 from ranking import (  # noqa: E402
     DEFAULT_MAX_IDENTITY,
+    DEFAULT_MAX_IPAE_TGT,
+    DEFAULT_MIN_BINDER_IPLDDT,
+    DEFAULT_MIN_BURIED_FRAC,
     DEFAULT_MIN_IPTM,
     DEFAULT_N,
     TARGETS,
@@ -48,6 +51,14 @@ PREFERRED_COLS = [
     "boltz2_iptm",
     "boltz2_ptm",
     "boltz2_plddt",
+    "ipae_tgt_aligned",
+    "binder_iplddt",
+    "binder_plddt_mean",
+    "contact_density",
+    "buried_frac_binder",
+    "n_contacts",
+    "ipSAE_tgt_aligned",
+    "ipSAE_pep_aligned",
     "ipSAE",
     "ipSAE_min",
     "ipSAE_max",
@@ -100,11 +111,14 @@ def write_fasta(df: pd.DataFrame, path: Path) -> None:
             seq = getattr(r, "sequence", "")
             iptm = getattr(r, "boltz2_iptm", "")
             ipsae = getattr(r, "ipSAE", "")
+            ipae = getattr(r, "ipae_tgt_aligned", "")
+            bpl = getattr(r, "binder_iplddt", "")
             rec = getattr(r, "epitope_recall", "")
             cat = getattr(r, "n_catalytic_contacts", "")
             score = getattr(r, "rank_score", "")
             fh.write(
-                f">{did} iptm={iptm} ipsae={ipsae} epitope_recall={rec} "
+                f">{did} ipae_tgt={ipae} binder_iplddt={bpl} iptm={iptm} "
+                f"ipsae={ipsae} epitope_recall={rec} "
                 f"n_cat={cat} rank_score={score}\n{seq}\n"
             )
 
@@ -122,6 +136,12 @@ def main() -> int:
         help="allow designs that do not contact the catalytic core",
     )
     ap.add_argument("--allow-toxin", action="store_true")
+    ap.add_argument("--min-binder-iplddt", type=float, default=DEFAULT_MIN_BINDER_IPLDDT,
+                    help="peptide interface pLDDT floor (50 = AlphaFold 'very low' boundary)")
+    ap.add_argument("--max-ipae-tgt", type=float, default=DEFAULT_MAX_IPAE_TGT,
+                    help="max interface PAE (A) with target aligned / peptide scored")
+    ap.add_argument("--min-buried-frac", type=float, default=DEFAULT_MIN_BURIED_FRAC,
+                    help="min fraction of peptide residues contacting the target")
     args = ap.parse_args()
 
     os.makedirs(args.results_dir, exist_ok=True)
@@ -135,6 +155,9 @@ def main() -> int:
             min_iptm=args.min_iptm,
             require_catalytic=not args.allow_no_catalytic,
             require_non_toxin=not args.allow_toxin,
+            min_binder_iplddt=args.min_binder_iplddt,
+            max_ipae_tgt=args.max_ipae_tgt,
+            min_buried_frac=args.min_buried_frac,
         )
         selected = select_panel(
             pool,
@@ -143,6 +166,9 @@ def main() -> int:
             min_iptm=args.min_iptm,
             require_catalytic=not args.allow_no_catalytic,
             require_non_toxin=not args.allow_toxin,
+            min_binder_iplddt=args.min_binder_iplddt,
+            max_ipae_tgt=args.max_ipae_tgt,
+            min_buried_frac=args.min_buried_frac,
         )
         ranked["selected"] = ranked["design_id"].isin(set(selected["design_id"]))
         ranked_path = args.results_dir / f"ranked_{target}.csv"

@@ -33,4 +33,4 @@ entities:
         binding: 23,25,31,51,78,80..83,147..148,166,169,174..178,207..208
   - protein:
       id: P
-      sequence: 12..45
+      sequence: 50..100

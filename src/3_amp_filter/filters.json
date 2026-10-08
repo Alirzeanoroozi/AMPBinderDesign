@@ -1,6 +1,5 @@
 {
-  "_comment": "Hard gates for the structure-prediction panel. No ranking. A design passes if every gate that has a value on that row succeeds; a missing value skips that gate (e.g. catalytic_ok is not available until structure scoring). These gates do not require AMP-likeness, and they deliberately do NOT gate on net charge, hydrophobic moment or any cationic/amphipathic 'delivery proxy': cationic+amphipathic is the biophysical definition of a membrane-lytic AMP, so gating on it reimposes the AMP objective and preferentially discards good binders, which against NDM-5/KPC-3 are net acidic. Those descriptors are still computed and carried in the manifest as annotations.",
-
+  "_comment": "Hard gates for the structure-prediction panel. No ranking. A design passes if every gate that has a value on that row succeeds; a missing value skips that gate (e.g. catalytic_ok is not available until structure scoring). These gates do not require AMP-likeness, and they deliberately do NOT gate on net charge, hydrophobic moment or any cationic/amphipathic 'delivery proxy': cationic+amphipathic is the biophysical definition of a membrane-lytic AMP, so gating on it reimposes the AMP objective and preferentially discards good binders, which against NDM-5/KPC-3 are net acidic. Those descriptors are still computed and carried in the manifest as annotations. Length is the mini-binder range [50,100]; cys_count must be 0 because BoltzGen's own filter_cysteine was not active in the original run (protocol protein-anything) and 10/25 of the NDM5 panel carried a free cysteine.",
   "gates": {
     "toxinpred_non_toxin": {
       "column": "toxinpred_class",
@@ -24,9 +23,14 @@
     },
     "length": {
       "column": "length",
-      "min": 12,
-      "max": 45,
-      "reason": "length outside [12, 45]"
+      "min": 50,
+      "max": 100,
+      "reason": "length outside [50, 100] (mini-binder range; was [12,45] AMP sizing)"
+    },
+    "no_free_cysteine": {
+      "column": "cys_count",
+      "max": 0,
+      "reason": "contains a cysteine: unpaired Cys is a synthesis/oxidation/dimerisation liability"
     },
     "max_aa_fraction": {
       "column": "max_aa_fraction",

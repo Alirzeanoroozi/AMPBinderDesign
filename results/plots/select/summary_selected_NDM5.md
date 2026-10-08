@@ -1,44 +1,42 @@
-AMPBinderDesign panel summary: NDM5 selected panel  /scratch/esevinc22/AMPBinderDesign/AMPBinderDesign/results/selected_NDM5.csv  (25 designs)
+AMPBinderDesign panel summary: NDM5 selected panel  /scratch/esevinc22/AMPBinderDesign/AMPBinderDesign/results/selected_NDM5.csv  (8 designs)
 
-INHIBITOR GATE  catalytic_ok=True: 25/25  (100.0%)   [STRONG]
+INHIBITOR GATE  catalytic_ok=True: 8/8  (100.0%)   [STRONG]
 
-STRUCTURE GATE  catalytic_ok and iPTM>=0.5: 25/25  (100.0%)
+STRUCTURE GATE  catalytic_ok and iPTM>=0.5: 5/8  (62.5%)
 
-STRUCTURE GATES  pass: 25/25 (100.0%)
+STRUCTURE GATES  pass: 5/8 (62.5%)
 
 metric                                         n       min       q25    median       q75       max
 ----------------------------------------------------------------------------------------------------
-Boltz-2 iPTM                                  25     0.725     0.815     0.844     0.893     0.911
-ipSAE (max of A→B, B→A)                       25     0.359     0.493     0.549     0.697       0.8
-ipSAE_min (d0-floored for short binders)      25    0.0531    0.0961     0.132     0.205     0.407
-Active-site coverage                          25      0.55       0.7       0.8       0.8       0.9
-Interface focus on epitope                    25     0.484     0.667     0.708     0.762     0.941
-# catalytic-core contacts                     25         4         5         6         6         6
-pDockQ                                        25     0.131     0.168     0.242     0.302     0.436
-LIS                                           25     0.418     0.499     0.556     0.614      0.69
-Boltz-2 complex pLDDT                         25     0.907     0.921     0.931     0.935     0.964
-AMPScanner P(AMP annotation)                  25    0.0008    0.0056    0.0101    0.0263     0.209
-Macrel P(AMP annotation)                      25      0.02     0.069     0.109     0.149     0.347
-Macrel P(hemolytic)                           25         0      0.01      0.03      0.05     0.099
-Binder length (aa)                            25        12        14        17        25        39
-Net charge at pH 7.4                          25     -5.13     -2.03     -1.02     -0.02      1.98
-Periplasmic-delivery proxy                    25     0.168     0.289      0.39     0.457      0.63
-Aggregation proxy                             25     -1.03       0.2       0.6      1.13      1.76
-# synthesis liabilities                       25         0         0         0         1         2
-Composite rank score                          25     0.889     0.894     0.905     0.922     0.933
+Boltz-2 iPTM                                   8     0.284     0.421     0.539      0.87     0.879
+ipSAE (max of A→B, B→A)                        8         0    0.0124    0.0779     0.431     0.579
+ipSAE_min (d0-floored for short binders)       8         0         0    0.0126     0.397     0.495
+Active-site coverage                           8       0.2      0.45       0.5       0.6      0.75
+Interface focus on epitope                     8     0.174     0.429     0.462     0.571     0.714
+# catalytic-core contacts                      8         1         1       1.5         2         4
+pDockQ                                         8     0.149     0.221     0.272     0.338     0.348
+LIS                                            8    0.0183    0.0662     0.105     0.358      0.41
+Boltz-2 complex pLDDT                          8     0.857     0.875     0.912     0.935     0.937
+AMPScanner P(AMP annotation)                   8    0.0026    0.0105    0.0343    0.0761      0.44
+Macrel P(AMP annotation)                       8         0      0.01      0.03     0.089     0.089
+Macrel P(hemolytic)                            8     0.079     0.089     0.104     0.178     0.198
+Binder length (aa)                             8        53        58      68.5        81        96
+Net charge at pH 7.4                           8     -7.02     -4.03     -2.53     -1.02     -0.03
+Periplasmic-delivery proxy                     8       0.5       0.5       0.5       0.5       0.5
+Aggregation proxy                              8     0.857      1.17      1.54      2.19      2.37
+# synthesis liabilities                        8         0         1         1         2         2
+Composite rank score                           8     0.653      0.74     0.746     0.838     0.891
 
-TOP 10 BY rank_score:
+TOP 8 BY rank_score:
   design_id                       rank   iPTM   ipSAE   eRec  #cat    L  charge
-  NDM5_0833                      0.933   0.91   0.733   0.80   6.0   22    -1.1
-  NDM5_4051                      0.932   0.81   0.506   0.90   6.0   19    +0.9
-  NDM5_4819                      0.929   0.83   0.493   0.75   4.0   13    -1.0
-  NDM5_10_1                      0.927   0.81   0.390   0.80   6.0   13    -0.0
-  NDM5_1778                      0.924   0.89   0.716   0.70   6.0   26    -1.0
-  NDM5_423_7                     0.924   0.86   0.493   0.70   5.0   12    -1.0
-  rank0070_NDM5_0374             0.922   0.88   0.721   0.80   5.0   25    -5.1
-  NDM5_663_6                     0.921   0.91   0.672   0.60   6.0   13    -0.0
-  NDM5_4423                      0.915   0.77   0.456   0.85   6.0   23    -3.1
-  NDM5_1045                      0.910   0.83   0.537   0.80   6.0   25    -4.1
+  NDM5_0_2                       0.891   0.87   0.431   0.40     1   53    -6.0
+  NDM5_16_2                      0.838   0.88   0.579   0.45     1   77    -4.0
+  NDM5_3_9                       0.771   0.54   0.124   0.60     2   79    -3.0
+  NDM5_1_1                       0.749   0.57   0.060   0.55     2   60    -0.0
+  NDM5_17_3                      0.743   0.41   0.012   0.60     2   96    -7.0
+  rank001_NDM5_026               0.740   0.42   0.012   0.75     4   58    -1.0
+  NDM5_11_5                      0.705   0.28   0.000   0.45     1   81    -2.0
+  NDM5_10_1                      0.653   0.54   0.096   0.20     1   54    -2.0
 
 WET-LAB READINESS:
   Pool is filtered for periplasmic-delivery proxy and generic peptide

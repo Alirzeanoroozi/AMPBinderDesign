@@ -23,7 +23,21 @@
 
 FASTAS_DIR="${FASTAS_DIR:-fastas}"
 OUTPUT_DIR="${OUTPUT_DIR:-results/classifiers}"
-CLASSIFIERS="${CLASSIFIERS:-ampscanner macrel hydramp_amp hydramp_mic toxinpred}"
+# HydrAMP is DROPPED by default. It only accepts peptides of <= 25 aa
+# (HYDRAMP_MAX_LEN in merge_classifier_results.py); with the binder range now
+# 50-100 aa every sequence is filtered out, the Keras model receives an empty
+# batch and dies with "Unexpected result of `predict_function` (Empty
+# batch_outputs)", taking the whole stage - and the chain - down with it.
+#
+# Nothing depends on it: no gate in filters.json uses a hydramp column, and
+# ranking.py carries hydramp_* only as passthrough annotations. It is an
+# AMP-likeness classifier, which is explicitly not an objective here.
+# merge_classifier_results.py handles its absence natively - returns {} for the
+# missing CSV and marks every row hydramp_scored=False with
+# hydramp_skip_reason="length>25", which satisfies create_manifest's validation.
+# Re-add with CLASSIFIERS="... hydramp_amp hydramp_mic ..." if you go back to
+# short peptides.
+CLASSIFIERS="${CLASSIFIERS:-ampscanner macrel toxinpred}"
 
 set -euo pipefail
 

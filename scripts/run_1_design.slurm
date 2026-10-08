@@ -54,6 +54,17 @@ if not all("/AMPBinderDesign/AMPBinderDesign/src/1_design/boltzgen/" in str(path
     raise SystemExit(f"Unexpected BoltzGen import path(s): {paths}")
 PY
 
+# Refuse to design if a target's structure and design sequence disagree. The
+# stage-0 scaffolds are NDM-1 (5YPM) and KPC-2 (3DW0); design_domain.fasta
+# carries the NDM-5 / KPC-3 mutations but the coordinates did not, so the two
+# arms silently targeted different proteins at interface positions.
+# Set TARGET_CHECK=warn to downgrade to a warning.
+python src/0_targets/check_target_consistency.py --targets ${TARGETS} \
+  $([[ "${TARGET_CHECK:-strict}" == "warn" ]] && echo --warn-only) || {
+  echo "Target structure/sequence mismatch - run src/0_targets/apply_mutations.py first." >&2
+  exit 1
+}
+
 # BoltzGen design path.
 for target in ${TARGETS}; do
   yaml="boltzgen_inputs/yamls/${target}.yaml"
@@ -63,10 +74,18 @@ for target in ${TARGETS}; do
     exit 1
   fi
   echo "=== BoltzGen: ${target} ($(date)) ==="
+  # --additional_filters 'CYS_fraction<0' adds the hard no-designed-cysteine
+  # filter. BoltzGen only enables filter_cysteine for the peptide-anything /
+  # antibody / nanobody protocols; the default protein-anything protocol we use
+  # does NOT, which is why the original run produced panels where 10/25 NDM5
+  # designs carried a free cysteine. ('<' means lower-is-better.)
   boltzgen run "${yaml}" \
     --output "${out_dir}" \
+    --protocol "${BOLTZGEN_PROTOCOL:-protein-anything}" \
     --num_designs "${NUM_DESIGNS}" \
     --budget "${BUDGET}" \
+    --filter_biased true \
+    --additional_filters 'CYS_fraction<0' \
     --reuse
 done
 
@@ -106,7 +125,7 @@ PY
     --model-dir "${RFDIFFUSION_MODEL_DIR:-${RFDIFFUSION_REPO}/models}" \
     --out-dir rfdiffusion_outputs \
     --num-designs "${RFDIFFUSION_NUM_DESIGNS:-1000}" \
-    --binder-len "${RFDIFFUSION_BINDER_LEN:-12-45}" \
+    --binder-len "${RFDIFFUSION_BINDER_LEN:-50-100}" \
     --hotspot-limit "${RFDIFFUSION_HOTSPOT_LIMIT:-0}" \
     --noise "${RFDIFFUSION_NOISE:-0.5}"
 
@@ -114,8 +133,8 @@ PY
   conda activate "${CONDA_ENV_NAME}"
   set -u
   export PYTHONPATH="${REPO_DIR}/src/1_design:${PYTHONPATH:-}"
-  python src/1_design/inverse_folding.py --design_dir rfdiffusion_outputs/KPC3 --output_dir rfdiffusion_outputs/KPC3_inverse_folding --suffix ".pdb" --skip_existing
-  python src/1_design/inverse_folding.py --design_dir rfdiffusion_outputs/NDM5 --output_dir rfdiffusion_outputs/NDM5_inverse_folding --suffix ".pdb" --skip_existing
+  python src/1_design/inverse_folding.py --design_dir rfdiffusion_outputs/KPC3 --output_dir rfdiffusion_outputs/KPC3_inverse_folding --suffix ".pdb" --skip_existing --multiplicity "${IFOLD_MULTIPLICITY:-10}"
+  python src/1_design/inverse_folding.py --design_dir rfdiffusion_outputs/NDM5 --output_dir rfdiffusion_outputs/NDM5_inverse_folding --suffix ".pdb" --skip_existing --multiplicity "${IFOLD_MULTIPLICITY:-10}"
   EXTRACT_OUTPUT_DIRS+=(rfdiffusion_outputs/KPC3_inverse_folding rfdiffusion_outputs/NDM5_inverse_folding)
 fi
 

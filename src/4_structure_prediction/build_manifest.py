@@ -79,6 +79,7 @@ def score_files(target: str, scores_dir: str | None) -> list[str]:
         os.path.join(REPO, "results", f"boltz2_{target}.csv"),
         os.path.join(REPO, "results", f"active_site_overlap_{target}.csv"),
         os.path.join(REPO, "results", f"ipsae_{target}.csv"),
+        os.path.join(REPO, "results", f"interface_metrics_{target}.csv"),
     ]
     extra = []
     if scores_dir and os.path.isdir(scores_dir):

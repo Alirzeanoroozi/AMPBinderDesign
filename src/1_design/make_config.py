@@ -21,8 +21,24 @@ import os
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.abspath(os.path.join(HERE, "..", ".."))
 OUT_DIR = os.path.join(REPO, "boltzgen_inputs")
+# run_1_design.slurm reads boltzgen_inputs/yamls/<T>.yaml. This writer used to
+# emit boltzgen_inputs/<T>_design.yaml, which NOTHING read - so the yamls/ copies
+# were stale hand-copies and a change to BINDER_LEN here never reached BoltzGen.
+YAML_DIR = os.path.join(OUT_DIR, "yamls")
 
-BINDER_LEN = (12, 45)      # peptide-binder length range (residues)
+# Mini-binder length range (residues). This MUST stay in sync with
+# rfdiffusion.py DEFAULT_BINDER_LEN, the RFDIFFUSION_BINDER_LEN slurm default,
+# and the "length" gate in src/3_amp_filter/filters.json.
+#
+# Was (12, 45), inherited from the predecessor AMP project: that is a
+# synthetic-peptide range, not a folded-binder range. A 12-45 aa chain has
+# little scope to form a stable tertiary fold against a beta-lactamase active
+# site, and it showed: median binder interface pLDDT across the 12-17 aa bin
+# was 42 vs 66 for 36-45 aa. 50-100 aa is the usual mini-binder range.
+#
+# Trade-off to be aware of: >~50 aa is past practical solid-phase peptide
+# synthesis, so these become recombinant constructs, not ordered peptides.
+BINDER_LEN = (50, 100)     # mini-binder length range (residues)
 NUM_DESIGNS = 5000         # intermediate candidates (GPU-heavy; tune to budget)
 BUDGET = 200               # final ranked designs to keep
 
@@ -99,7 +115,8 @@ entities:
       id: P
       sequence: {BINDER_LEN[0]}..{BINDER_LEN[1]}
 """
-    out_yaml = os.path.join(OUT_DIR, f"{tkey}_design.yaml")
+    os.makedirs(YAML_DIR, exist_ok=True)
+    out_yaml = os.path.join(YAML_DIR, f"{tkey}.yaml")
     with open(out_yaml, "w") as fh:
         fh.write(yaml)
     print(f"[{tkey}] {len(hot_ord)} hotspots / {len(seq)} aa -> {os.path.relpath(out_yaml, REPO)}")

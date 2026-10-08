@@ -20,7 +20,7 @@ RFDIFFUSION_ENV="${RFDIFFUSION_ENV:-SE3nv}"
 CONDA_ENV_NAME="${CONDA_ENV_NAME:-boltzgen}"
 TARGETS="${TARGETS:-KPC3 NDM5}"
 RFDIFFUSION_NUM_DESIGNS="${RFDIFFUSION_NUM_DESIGNS:-1000}"
-RFDIFFUSION_BINDER_LEN="${RFDIFFUSION_BINDER_LEN:-12-45}"
+RFDIFFUSION_BINDER_LEN="${RFDIFFUSION_BINDER_LEN:-50-100}"
 RFDIFFUSION_HOTSPOT_LIMIT="${RFDIFFUSION_HOTSPOT_LIMIT:-0}"
 RFDIFFUSION_NOISE="${RFDIFFUSION_NOISE:-0.5}"
 MOL_DIR="${MOL_DIR:-/home/esevinc22/.cache/huggingface/hub/datasets--boltzgen--inference-data/snapshots/c3d36fd276e9caf098c75d4113c6d5eb320b1a4c/mols.zip}"
@@ -37,6 +37,7 @@ echo "RFdiffusion: ${RFDIFFUSION_REPO}"
 echo "Targets: ${TARGETS} | num_designs=${RFDIFFUSION_NUM_DESIGNS}"
 echo "==========================================="
 
+
 CONDA_BASE="$(conda info --base)"
 source "${CONDA_BASE}/etc/profile.d/conda.sh"
 export LD_LIBRARY_PATH="${CONDA_BASE}/lib:${LD_LIBRARY_PATH:-}"
@@ -44,6 +45,22 @@ export LD_LIBRARY_PATH="${CONDA_BASE}/lib:${LD_LIBRARY_PATH:-}"
 set +u
 conda activate "${RFDIFFUSION_ENV}"
 set -u
+
+# Refuse to design if a target's structure and design sequence disagree. The
+# stage-0 scaffolds are NDM-1 (5YPM) and KPC-2 (3DW0); design_domain.fasta
+# carries the NDM-5 / KPC-3 mutations but the coordinates did not, so this arm
+# silently designed against the wrong residue at interface positions. Must run
+# AFTER conda activation - `python` does not exist before it.
+# Set TARGET_CHECK=warn to downgrade to a warning.
+rc=0
+python src/0_targets/check_target_consistency.py --targets ${TARGETS} \
+  $([[ "${TARGET_CHECK:-strict}" == "warn" ]] && echo --warn-only) || rc=$?
+if [[ "${rc}" -ne 0 ]]; then
+  echo "Target consistency check failed (exit ${rc}; 1=mismatch, 2=cannot check)." >&2
+  echo "Run: python src/0_targets/apply_mutations.py --target <T> --accept-truncated \\" >&2
+  echo "       --out targets/<T>/structures/<T>_target_mutated.pdb" >&2
+  exit 1
+fi
 python - <<'PY'
 import importlib.util
 import sys
@@ -67,7 +84,13 @@ print(
 PY
 GEN_TARGETS=""
 for target in ${TARGETS}; do
-  existing=$(ls "rfdiffusion_outputs/${target}/${target}"_*.pdb 2>/dev/null | wc -l)
+  # nullglob array, not `ls | wc -l`: on a FRESH run the directory does not
+  # exist yet, ls exits 2, pipefail propagates it and set -e kills the job
+  # silently (2>/dev/null hides the reason).
+  shopt -s nullglob
+  _raw=( "rfdiffusion_outputs/${target}/${target}"_*.pdb )
+  shopt -u nullglob
+  existing=${#_raw[@]}
   if [[ "${existing}" -lt "${RFDIFFUSION_NUM_DESIGNS}" ]]; then
     GEN_TARGETS="${GEN_TARGETS} ${target}"
   else
@@ -105,24 +128,42 @@ for target in ${TARGETS}; do
   rm -rf "${pending_dir}"
   mkdir -p "${pending_dir}"
   pending_count=0
-  for pdb in "${design_dir}/${target}"_*.pdb; do
+  # nullglob throughout: an unguarded glob iterates the LITERAL pattern when it
+  # matches nothing, which would yield a bogus stem like "KPC3_*" and then
+  # symlink a non-existent file into the pending dir.
+  shopt -s nullglob
+  _designs=( "${design_dir}/${target}"_*.pdb )
+  for pdb in "${_designs[@]}"; do
     stem="$(basename "${pdb}" .pdb)"
-    have=$(ls "${output_dir}/${stem}_"*.cif 2>/dev/null | wc -l)
+    _variants=( "${output_dir}/${stem}_"*.cif )
+    have=${#_variants[@]}
     if [[ "${have}" -lt "${IFOLD_MULTIPLICITY}" ]]; then
-      for f in "${design_dir}/${stem}".*; do
+      _parts=( "${design_dir}/${stem}".* )
+      for f in "${_parts[@]}"; do
         ln -sf "$(readlink -f "${f}")" "${pending_dir}/"
       done
       pending_count=$((pending_count + 1))
     fi
   done
+  shopt -u nullglob
+  if [[ "${#_designs[@]}" -eq 0 ]]; then
+    echo "${target}: no RFdiffusion backbones found in ${design_dir}" >&2
+    exit 1
+  fi
   echo "${target}: ${pending_count}/${RFDIFFUSION_NUM_DESIGNS} designs still need inverse folding (need ${IFOLD_MULTIPLICITY} variants each)"
 
   if [[ "${pending_count}" -gt 0 ]]; then
+    # --multiplicity MUST be passed: inverse_folding.py defaults to 10, so
+    # IFOLD_MULTIPLICITY previously only affected the "is this design done?"
+    # bookkeeping above and not generation. Setting it to 5 silently still
+    # produced 10 variants per backbone; setting it above 10 would have made the
+    # pending loop never converge.
     python src/1_design/inverse_folding.py \
       --design_dir "${pending_dir}" \
       --output_dir "${output_dir}" \
       --moldir "${MOL_DIR}" \
       --checkpoint "${IFOLD_CHECKPOINT}" \
+      --multiplicity "${IFOLD_MULTIPLICITY}" \
       --suffix ".pdb"
   else
     echo "${target}: inverse folding already complete, skipping"

@@ -29,7 +29,7 @@ HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
 
 DEFAULT_TARGETS = ("NDM5", "KPC3")
-DEFAULT_BINDER_LEN = "12-45"
+DEFAULT_BINDER_LEN = "50-100"   # keep in sync with make_config.BINDER_LEN
 DEFAULT_NOISE = 0.5
 
 
@@ -66,6 +66,24 @@ def pdb_residues(path: Path, chain_id: Optional[str] = None) -> List[Tuple[str, 
                 seen.add(key)
                 residues.append(key)
     return residues
+
+
+def target_structure(target: str) -> Path:
+    """Preferred target structure, mutated variant first.
+
+    The stage-0 scaffolds are NDM-1 (5YPM) and KPC-2 (3DW0); design_domain.fasta
+    carries the NDM-5 / KPC-3 mutations but the coordinates did not, so this arm
+    used to design against the wrong residue at interface positions. Once
+    src/0_targets/apply_mutations.py has written <T>_target_mutated.pdb, use it.
+    """
+    base = REPO / "targets" / target / "structures"
+    for name in (f"{target}_target_mutated.pdb", f"{target}_target.pdb"):
+        p = base / name
+        if p.exists():
+            if name.endswith("_mutated.pdb"):
+                print(f"[{target}] using mutated target structure: {p.name}")
+            return p
+    raise FileNotFoundError(base / f"{target}_target.pdb")
 
 
 def contiguous_spans(resnums: Iterable[int]) -> List[Tuple[int, int]]:
@@ -136,9 +154,7 @@ def rfdiffusion_command(
     extra_args: List[str],
 ) -> Tuple[List[str], Path, List[int]]:
     chain_id = target_def.get("scaffold_chain", "A")
-    input_pdb = REPO / "targets" / target / "structures" / f"{target}_target.pdb"
-    if not input_pdb.exists():
-        raise FileNotFoundError(input_pdb)
+    input_pdb = target_structure(target)
 
     all_hotspots = read_hotspot_resnums(target)
     selected_hotspots = select_hotspots(all_hotspots, hotspot_limit)
@@ -278,7 +294,7 @@ def main() -> int:
             {
                 "target": target,
                 "input_pdb": os.path.relpath(
-                    REPO / "targets" / target / "structures" / f"{target}_target.pdb",
+                    target_structure(target),
                     REPO,
                 ),
                 "target_chain": chain_id,
